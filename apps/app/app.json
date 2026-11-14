@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Scrapbook",
-    "slug": "scrapbook",
+    "name": "Fwd:Me",
+    "slug": "fwdme",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.scrapbook.mobile"
+      "bundleIdentifier": "app.fwdme.mobile"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "app.scrapbook.mobile"
+      "package": "app.fwdme.mobile"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -31,7 +31,7 @@
       "expo-sqlite",
       "expo-localization"
     ],
-    "scheme": "scrapbook",
+    "scheme": "fwdme",
     "experiments": {
       "typedRoutes": true
     }

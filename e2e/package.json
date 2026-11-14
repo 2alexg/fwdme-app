@@ -1,5 +1,5 @@
 {
-  "name": "@scrapbook/e2e",
+  "name": "@fwdme/e2e",
   "private": true,
   "type": "module",
   "scripts": {

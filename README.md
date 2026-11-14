@@ -1,4 +1,4 @@
-# Scrapbook
+# Fwd:Me
 
 Save anything from any app in one tap, have it organized automatically, and optionally share it.
 Design doc: [Scrapbook App — Product & Technical Design](https://claude.ai/artifact/1eAUAC2aFVSCbnMZ7DZuPM).
@@ -33,11 +33,11 @@ Mailpit at http://127.0.0.1:54324.
 ## Tests
 
 ```sh
-pnpm test:db      # pgTAP: privacy rule, sign-up trigger, save_scrap (31 checks)
+pnpm test:db      # pgTAP: privacy rule, sign-up trigger, save_scrap, account-type changes (40 checks)
 pnpm test         # core unit tests + API integration tests against local Supabase
 pnpm typecheck
 pnpm build:web && npx serve -s apps/app/dist -l 8081 &   # then:
-pnpm test:e2e     # sign up → save → comment → visibility → delete → Hebrew/RTL → sign in again
+pnpm test:e2e     # sign up → save → comment → visibility → delete → account type → Hebrew/RTL → sign in again
 ```
 
 Integration tests skip themselves when local Supabase isn't running.
@@ -52,9 +52,12 @@ Integration tests skip themselves when local Supabase isn't running.
   holds the owner's notes. `follows` exists only so the followers-only rule can be enforced; nothing
   writes to it yet.
 - **Privacy is enforced in Postgres** (`private.can_view_scrap`): the owner sees everything; anyone
-  else sees a scrap only if it is public, or followers-only and they follow the owner. A scrap with
-  no visibility of its own follows the account type (public → public, private → private). Clients
+  else sees a scrap only if it is public, or followers-only and they follow the owner. Clients
   can't write `items`, reassign scraps, or comment on other people's scraps.
+- **Visibility is fixed per scrap.** The account type (public/private) only sets the default for
+  new scraps, stored when they are saved. Changing the account type never changes existing scraps;
+  Settings offers to move them all to the new mode (`set_all_scraps_visibility()`), and only does
+  so if the user accepts.
 - **Capture:** the one write path is `save_scrap()`. It finds or creates the item, creates the scrap
   (or returns the existing one with `already_saved`), and appends the optional comment. The share
   extensions in milestone 2 will call the same function.

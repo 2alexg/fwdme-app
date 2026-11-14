@@ -10,7 +10,8 @@ import {
   setScrapVisibility,
   type Scrap,
   type ScrapComment,
-} from '@scrapbook/core';
+  type Visibility,
+} from '@fwdme/core';
 import * as Linking from 'expo-linking';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -30,7 +31,6 @@ import {
   VisibilityPicker,
   space,
   usePalette,
-  type VisibilityChoice,
 } from '@/ui/components';
 
 export default function ScrapScreen() {
@@ -65,8 +65,7 @@ export default function ScrapScreen() {
 
   const summary = scrapSummary(scrap, locale);
 
-  async function changeVisibility(choice: VisibilityChoice) {
-    const next = choice === 'default' ? null : choice;
+  async function changeVisibility(next: Visibility) {
     const prev = scrap!.visibility;
     setScrap({ ...scrap!, visibility: next });
     try {
@@ -116,7 +115,7 @@ export default function ScrapScreen() {
 
         <Card>
           <Text style={{ color: c.text, fontWeight: '700' }}>{t('visibility')}</Text>
-          <VisibilityPicker value={scrap.visibility ?? 'default'} onChange={changeVisibility} />
+          <VisibilityPicker value={scrap.visibility} onChange={changeVisibility} />
         </Card>
 
         <Button kind="danger" title={t('deleteScrap')} onPress={remove} />

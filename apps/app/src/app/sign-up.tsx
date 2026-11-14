@@ -1,4 +1,4 @@
-import { MIN_PASSWORD_LENGTH, USERNAME_PATTERN, signUp } from '@scrapbook/core';
+import { MIN_PASSWORD_LENGTH, USERNAME_PATTERN, signUp } from '@fwdme/core';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Text } from 'react-native';

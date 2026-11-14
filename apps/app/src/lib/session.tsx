@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
-import { getMyProfile, type Profile } from '@scrapbook/core';
+import { getMyProfile, type Profile } from '@fwdme/core';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase } from './supabase';
 

@@ -1,4 +1,4 @@
-import { signIn } from '@scrapbook/core';
+import { signIn } from '@fwdme/core';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Text } from 'react-native';

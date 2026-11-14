@@ -1,8 +1,8 @@
 -- Privacy rule: owner sees all; others see public, or followers-only if they
--- follow the owner; null visibility follows the account default.
+-- follow the owner. Visibility is fixed at save time (account type = default).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(31);
+select plan(40);
 
 -- Count only this test's fixtures so leftover dev/e2e data doesn't matter.
 create temp table t_users (id uuid primary key) on commit drop;
@@ -56,7 +56,7 @@ select throws_ok($$ insert into items (canonical_url) values ('https://evil.test
 select throws_ok($$ update scraps set user_id = '22222222-2222-2222-2222-222222222222' $$, '42501', null,
                  'clients cannot reassign a scrap');
 
--- Public account: null visibility means public
+-- Public account: no choice means public
 set local request.jwt.claims = '{"sub":"44444444-4444-4444-4444-444444444444","role":"authenticated"}';
 select save_scrap('https://a.test/x', 'https://a.test/x', 'web', 'pub note', null);
 select is((select count(*)::int from items where canonical_url = 'https://a.test/x'), 1,
@@ -100,12 +100,40 @@ select is((select count(*)::int from scraps where user_id in (select id from t_u
 select throws_ok($$ select save_scrap('https://e.test/', 'https://e.test/') $$, '42501', null,
                  'anon cannot save');
 
--- Owner flips account to public: default-visibility scraps become public
+-- Account type is only the default for new scraps
 reset role;
+select is((select visibility::text from scraps s join items i on i.id = s.item_id
+           where s.user_id = '11111111-1111-1111-1111-111111111111' and i.canonical_url = 'https://a.test/x'),
+          'private', 'a scrap saved with no choice stores the account default (private)');
+select is((select visibility::text from scraps
+           where user_id = '44444444-4444-4444-4444-444444444444'),
+          'public', 'a public account''s scrap stores public');
 update profiles set account_type = 'public' where id = '11111111-1111-1111-1111-111111111111';
 set local role anon;
-select is((select count(*)::int from scraps where user_id in (select id from t_users)), 3,
-          'null visibility follows the account type when it changes');
+select is((select count(*)::int from scraps where user_id in (select id from t_users)), 2,
+          'changing the account type does not change existing scraps');
+reset role;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+select save_scrap('https://f.test/', 'https://f.test/');
+select is((select visibility::text from scraps where original_url = 'https://f.test/'),
+          'public', 'new scraps after the change use the new default');
+select throws_ok($$ update scraps set visibility = null where original_url = 'https://f.test/' $$,
+                 '23502', null, 'visibility can no longer be null');
+
+-- Opt-in bulk change: only the caller's scraps, only those that differ
+set local request.jwt.claims = '{"sub":"44444444-4444-4444-4444-444444444444","role":"authenticated"}';
+select is(set_all_scraps_visibility('private'), 1, 'bulk change returns how many scraps changed');
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+select is(set_all_scraps_visibility('public'), 3, 'bulk change skips scraps already in that mode');
+select is((select count(*)::int from scraps where user_id = auth.uid() and visibility <> 'public'), 0,
+          'all of the owner''s scraps are now public');
+reset role;
+select is((select visibility::text from scraps where user_id = '44444444-4444-4444-4444-444444444444'),
+          'private', 'another user''s bulk change did not touch this user''s scraps');
+set local role anon;
+select throws_ok($$ select set_all_scraps_visibility('public') $$, '42501', null,
+                 'anon cannot bulk change');
 
 -- Owner edits and deletes
 reset role;
@@ -114,7 +142,7 @@ set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","r
 update scrap_comments set body = 'edited' where body = 'second note';
 select isnt((select edited_at from scrap_comments where body = 'edited'), null, 'editing sets edited_at');
 delete from scraps where original_url = 'https://d.test/';
-select is((select count(*)::int from scraps where user_id = auth.uid()), 3, 'owner can delete their scrap');
+select is((select count(*)::int from scraps where user_id = auth.uid()), 4, 'owner can delete their scrap');
 
 select * from finish();
 rollback;

@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import {
   ApiError,
   addComment,
+  countScrapsNotIn,
   deleteComment,
   deleteScrap,
   editComment,
@@ -13,6 +14,7 @@ import {
   listMyScraps,
   saveScrap,
   scrapTitle,
+  setAllScrapsVisibility,
   setScrapVisibility,
   signIn,
   signUp,
@@ -102,10 +104,30 @@ describe.skipIf(!reachable)('api against local supabase', () => {
     const seen = await getScrap(anon, scrapId);
     expect(seen?.comments.map((c) => c.body)).toEqual(['mine']);
 
-    await setScrapVisibility(alice, scrapId, null);
+    await setScrapVisibility(alice, scrapId, 'private');
     expect(await getScrap(anon, scrapId)).toBeNull();
+  });
+
+  it('keeps existing scraps when the account type changes, and bulk-changes only on request', async () => {
+    const before = await saveScrap(alice, { input: `https://example.com/before-${run}` });
+    expect((await getScrap(alice, before.scrapId))!.visibility).toBe('private');
+
     await updateMyProfile(alice, aliceId, { account_type: 'public' });
-    expect(await getScrap(anon, scrapId)).not.toBeNull();
+    expect(await getScrap(anon, before.scrapId)).toBeNull();
+    const after = await saveScrap(alice, { input: `https://example.com/after-${run}` });
+    expect((await getScrap(alice, after.scrapId))!.visibility).toBe('public');
+
+    const notPublic = await countScrapsNotIn(alice, aliceId, 'public');
+    expect(notPublic).toBeGreaterThanOrEqual(2);
+    expect(await setAllScrapsVisibility(alice, 'public')).toBe(notPublic);
+    expect(await countScrapsNotIn(alice, aliceId, 'public')).toBe(0);
+    expect(await getScrap(anon, before.scrapId)).not.toBeNull();
+
+    // Bob's scraps are untouched by Alice's bulk change.
+    const bobs = await saveScrap(bob, { input: `https://example.com/bob-${run}` });
+    await setAllScrapsVisibility(alice, 'private');
+    expect((await getScrap(bob, bobs.scrapId))!.visibility).toBe('private');
+    expect(await getScrap(anon, bobs.scrapId)).toBeNull();
   });
 
   it('refuses saves without a session or a link', async () => {

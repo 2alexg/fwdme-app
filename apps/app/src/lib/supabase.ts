@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@scrapbook/core';
+import type { Database } from '@fwdme/core';
 import { AppState, Platform } from 'react-native';
 import { authStorage } from './storage';
 

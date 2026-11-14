@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
-    "@scrapbook/core": "workspace:*",
+    "@fwdme/core": "workspace:*",
     "@supabase/supabase-js": "^2.119.0",
     "expo": "~58.0.25",
     "expo-constants": "~58.0.16",

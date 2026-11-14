@@ -97,6 +97,34 @@ const cards = await page.locator('a[href^="/scrap/"]').count();
 if (cards !== 1) throw new Error(`expected 1 card after delete, got ${cards}`);
 step('deleting a scrap removes it from the library');
 
+// Account type change: existing scraps keep their visibility unless asked
+await page.getByText('Settings').filter({ visible: true }).click();
+await page.getByText(`@${username}`).waitFor();
+await page.getByRole('radio', { name: 'Public' }).filter({ visible: true }).click();
+await page.getByText("1 of your saved scraps isn't public. Make all your scraps public too?").waitFor();
+await page.screenshot({ path: `${out}/settings-suggestion.png`, fullPage: true });
+await page.getByRole('button', { name: 'Keep as they are' }).click();
+await page.waitForTimeout(300);
+if (await page.getByText('Make all your scraps public too?').count()) throw new Error('suggestion not dismissed');
+await page.goto(`${BASE}/`);
+await page.getByText('🔒 Only me').waitFor();
+if (await page.getByText('🌐 Public').count()) throw new Error('existing scrap changed with the account type');
+await page.getByPlaceholder('Paste a link…').fill('https://example.org/new-after-switch');
+await page.getByRole('button', { name: 'Save' }).click();
+await page.getByText('🌐 Public').waitFor();
+step('switching to public keeps existing scraps; new scraps use the new default');
+
+await page.getByText('Settings').filter({ visible: true }).click();
+await page.getByText(`@${username}`).waitFor();
+await page.getByRole('radio', { name: 'Only me' }).filter({ visible: true }).click();
+await page.getByText('1 of your saved scraps is visible to others. Make all your scraps private too?').waitFor();
+await page.getByRole('button', { name: 'Make all private' }).click();
+await page.getByText('Done — 1 scrap updated.').waitFor();
+await page.goto(`${BASE}/`);
+await page.getByText('🔒 Only me').first().waitFor();
+if (await page.getByText('🌐 Public').count()) throw new Error('bulk change to private did not apply');
+step('accepting the suggestion moves all existing scraps to the new mode');
+
 // Settings: Hebrew flips the document to RTL
 await page.getByText('Settings').click();
 await page.getByText(`@${username}`).waitFor();

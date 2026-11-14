@@ -36,7 +36,7 @@ export interface Scrap {
   user_id: string;
   original_url: string;
   shared_text: string | null;
-  visibility: Visibility | null;
+  visibility: Visibility;
   created_at: string;
   item: {
     id: string;
@@ -125,7 +125,7 @@ export interface SaveScrapInput {
   /** A URL, or any shared text that contains one. */
   input: string;
   comment?: string;
-  /** null/undefined = follow the account default. */
+  /** Omit to use the account default at save time; stored on the scrap from then on. */
   visibility?: Visibility | null;
   sharedText?: string;
 }
@@ -180,8 +180,28 @@ export async function getScrap(db: Db, scrapId: string): Promise<Scrap | null> {
   return row ? sortComments([row])[0]! : null;
 }
 
-export async function setScrapVisibility(db: Db, scrapId: string, visibility: Visibility | null) {
+export async function setScrapVisibility(db: Db, scrapId: string, visibility: Visibility) {
   unwrap(await db.from('scraps').update({ visibility }).eq('id', scrapId).select('id').single());
+}
+
+/**
+ * How many of the user's scraps are not in the given mode. Used to offer a
+ * bulk change after the account type changes (existing scraps never change
+ * on their own).
+ */
+export async function countScrapsNotIn(db: Db, userId: string, visibility: Visibility): Promise<number> {
+  const { count, error } = await db
+    .from('scraps')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .neq('visibility', visibility);
+  if (error) throw new ApiError(error.message, error.code);
+  return count ?? 0;
+}
+
+/** Opt-in: moves all of the signed-in user's scraps to one mode. Returns how many changed. */
+export async function setAllScrapsVisibility(db: Db, visibility: Visibility): Promise<number> {
+  return unwrap(await db.rpc('set_all_scraps_visibility', { p_visibility: visibility }));
 }
 
 export async function deleteScrap(db: Db, scrapId: string) {
@@ -235,11 +255,9 @@ export function scrapSummary(scrap: Pick<Scrap, 'item'>, locale: Locale): string
   return (locale === 'he' ? summary_he || summary_en : summary_en || summary_he) || og_description;
 }
 
-export function effectiveVisibility(
-  visibility: Visibility | null,
-  accountType: AccountType,
-): Visibility {
-  return visibility ?? (accountType === 'public' ? 'public' : 'private');
+/** The visibility a new scrap gets when the user doesn't choose one. */
+export function defaultVisibility(accountType: AccountType): Visibility {
+  return accountType === 'public' ? 'public' : 'private';
 }
 
 function sortComments(rows: Scrap[]): Scrap[] {

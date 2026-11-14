@@ -1,10 +1,10 @@
-import { ApiError, InvalidUrlError, type Locale } from '@scrapbook/core';
+import { ApiError, InvalidUrlError, type Locale } from '@fwdme/core';
 import { getLocales } from 'expo-localization';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 
 const en = {
-  appName: 'Scrapbook',
+  appName: 'Fwd:Me',
   // auth
   signIn: 'Sign in',
   signUp: 'Create account',
@@ -24,7 +24,7 @@ const en = {
   save: 'Save',
   saved: 'Saved',
   alreadySaved: 'Already in your library — your comment was added.',
-  emptyLibrary: 'Nothing saved yet. Paste a link above to start your scrapbook.',
+  emptyLibrary: 'Nothing saved yet. Paste a link above to get started.',
   loadMore: 'Load more',
   processing: 'Organizing…',
   failed: "Couldn't read this link",
@@ -53,9 +53,18 @@ const en = {
   settings: 'Settings',
   account: 'Account',
   accountType: 'Account type',
-  accountPublic: 'Public — new scraps are public unless you change them',
-  accountPrivate: 'Private — new scraps are only visible to you',
-  accountTypeNote: 'Scraps set to "Account default" follow this setting, including ones you already saved.',
+  accountPublic: 'Public — new scraps are public unless you choose otherwise',
+  accountPrivate: 'Private — new scraps are only visible to you unless you choose otherwise',
+  accountTypeNote: 'Changing this only affects scraps you save from now on.',
+  suggestPublic_one: '1 of your saved scraps isn\'t public. Make all your scraps public too?',
+  suggestPublic_other: '{n} of your saved scraps aren\'t public. Make all your scraps public too?',
+  suggestPrivate_one: '1 of your saved scraps is visible to others. Make all your scraps private too?',
+  suggestPrivate_other: '{n} of your saved scraps are visible to others. Make all your scraps private too?',
+  makeAllPublic: 'Make all public',
+  makeAllPrivate: 'Make all private',
+  keepAsIs: 'Keep as they are',
+  bulkDone_one: 'Done — 1 scrap updated.',
+  bulkDone_other: 'Done — {n} scraps updated.',
   language: 'Language',
   saveChanges: 'Save changes',
   changesSaved: 'Saved',
@@ -71,9 +80,10 @@ const en = {
 };
 
 export type StringKey = keyof typeof en;
+type PluralBase = StringKey extends infer K ? (K extends `${infer B}_one` ? B : never) : never;
 
 const he: Record<StringKey, string> = {
-  appName: 'Scrapbook',
+  appName: 'Fwd:Me',
   signIn: 'התחברות',
   signUp: 'יצירת חשבון',
   signOut: 'התנתקות',
@@ -117,9 +127,18 @@ const he: Record<StringKey, string> = {
   settings: 'הגדרות',
   account: 'חשבון',
   accountType: 'סוג חשבון',
-  accountPublic: 'ציבורי — פריטים חדשים ציבוריים אלא אם תשנו',
-  accountPrivate: 'פרטי — פריטים חדשים גלויים רק לך',
-  accountTypeNote: 'פריטים שמוגדרים "ברירת המחדל של החשבון" עוקבים אחרי ההגדרה הזו, כולל פריטים שכבר נשמרו.',
+  accountPublic: 'ציבורי — פריטים חדשים יהיו ציבוריים, אלא אם תבחרו אחרת',
+  accountPrivate: 'פרטי — פריטים חדשים יהיו גלויים רק לך, אלא אם תבחרו אחרת',
+  accountTypeNote: 'השינוי חל רק על פריטים שתשמרו מעכשיו.',
+  suggestPublic_one: 'פריט שמור אחד שלך אינו ציבורי. להפוך את כל הפריטים לציבוריים?',
+  suggestPublic_other: '{n} מהפריטים השמורים שלך אינם ציבוריים. להפוך את כל הפריטים לציבוריים?',
+  suggestPrivate_one: 'פריט שמור אחד שלך גלוי לאחרים. להפוך את כל הפריטים לפרטיים?',
+  suggestPrivate_other: '{n} מהפריטים השמורים שלך גלויים לאחרים. להפוך את כל הפריטים לפרטיים?',
+  makeAllPublic: 'להפוך הכול לציבורי',
+  makeAllPrivate: 'להפוך הכול לפרטי',
+  keepAsIs: 'להשאיר כמו שהם',
+  bulkDone_one: 'בוצע — פריט אחד עודכן.',
+  bulkDone_other: 'בוצע — {n} פריטים עודכנו.',
   language: 'שפה',
   saveChanges: 'שמירת שינויים',
   changesSaved: 'נשמר',
@@ -144,6 +163,8 @@ interface I18nState {
   locale: Locale;
   isRTL: boolean;
   t: (key: StringKey) => string;
+  /** Picks `<base>_one` or `<base>_other` and fills in {n}. */
+  plural: (base: PluralBase, n: number) => string;
   /** Turns any thrown error into a message in the current language. */
   errorText: (error: unknown) => string;
   setLocale: (locale: Locale) => void;
@@ -172,6 +193,8 @@ export function I18nProvider({ locale: preferred, children }: { locale?: Locale;
   const value = useMemo<I18nState>(() => {
     const dict = dictionaries[locale];
     const t = (key: StringKey) => dict[key];
+    const plural = (base: PluralBase, n: number) =>
+      t(`${base}_${n === 1 ? 'one' : 'other'}` as StringKey).replace('{n}', String(n));
     const errorText = (error: unknown) => {
       if (error instanceof InvalidUrlError) return t('err_invalid_url');
       const message = error instanceof Error ? error.message : String(error);
@@ -188,7 +211,7 @@ export function I18nProvider({ locale: preferred, children }: { locale?: Locale;
       const key = known[message] ?? (code ? known[code] : undefined);
       return key ? t(key) : t('err_generic');
     };
-    return { locale, isRTL, t, errorText, setLocale };
+    return { locale, isRTL, t, plural, errorText, setLocale };
   }, [locale, isRTL]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

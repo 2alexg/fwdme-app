@@ -1,4 +1,4 @@
-import type { Visibility } from '@scrapbook/core';
+import type { Visibility } from '@fwdme/core';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -184,15 +184,23 @@ export function Segmented<T extends string>({
 
 export type VisibilityChoice = Visibility | 'default';
 
-export function VisibilityPicker({ value, onChange }: { value: VisibilityChoice; onChange: (v: VisibilityChoice) => void }) {
+const VISIBILITY_LABELS: [Visibility, StringKey][] = [
+  ['private', 'vis_private'],
+  ['followers', 'vis_followers'],
+  ['public', 'vis_public'],
+];
+
+/** For a new scrap: includes "Account default", resolved when it is saved. */
+export function NewScrapVisibilityPicker({ value, onChange }: { value: VisibilityChoice; onChange: (v: VisibilityChoice) => void }) {
   const { t } = useI18n();
-  const keys: [VisibilityChoice, StringKey][] = [
-    ['default', 'vis_default'],
-    ['private', 'vis_private'],
-    ['followers', 'vis_followers'],
-    ['public', 'vis_public'],
-  ];
+  const keys: [VisibilityChoice, StringKey][] = [['default', 'vis_default'], ...VISIBILITY_LABELS];
   return <Segmented value={value} onChange={onChange} options={keys.map(([v, k]) => ({ value: v, label: t(k) }))} />;
+}
+
+/** For a saved scrap, which always has its own setting. */
+export function VisibilityPicker({ value, onChange }: { value: Visibility; onChange: (v: Visibility) => void }) {
+  const { t } = useI18n();
+  return <Segmented value={value} onChange={onChange} options={VISIBILITY_LABELS.map(([v, k]) => ({ value: v, label: t(k) }))} />;
 }
 
 export function VisibilityBadge({ visibility }: { visibility: Visibility }) {

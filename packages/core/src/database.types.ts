@@ -123,14 +123,14 @@ isOneToOne: false
                   ]
                 },"scraps": {
                   Row: {
-                    "created_at": string,"id": string,"item_id": string,"original_url": string,"shared_text": string | null,"updated_at": string,"user_category_override": string | null,"user_id": string,"visibility": Database["public"]['Enums']["visibility"] | null
+                    "created_at": string,"id": string,"item_id": string,"original_url": string,"shared_text": string | null,"updated_at": string,"user_category_override": string | null,"user_id": string,"visibility": Database["public"]['Enums']["visibility"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"item_id": string,"original_url": string,"shared_text"?: string | null,"updated_at"?: string,"user_category_override"?: string | null,"user_id"?: string,"visibility"?: Database["public"]['Enums']["visibility"] | null
+                    "created_at"?: string,"id"?: string,"item_id": string,"original_url": string,"shared_text"?: string | null,"updated_at"?: string,"user_category_override"?: string | null,"user_id"?: string,"visibility": Database["public"]['Enums']["visibility"]
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"item_id"?: string,"original_url"?: string,"shared_text"?: string | null,"updated_at"?: string,"user_category_override"?: string | null,"user_id"?: string,"visibility"?: Database["public"]['Enums']["visibility"] | null
+                    "created_at"?: string,"id"?: string,"item_id"?: string,"original_url"?: string,"shared_text"?: string | null,"updated_at"?: string,"user_category_override"?: string | null,"user_id"?: string,"visibility"?: Database["public"]['Enums']["visibility"]
                   }
                   Relationships: [
                     {
@@ -175,6 +175,9 @@ isOneToOne: false
           Functions: {
             "save_scrap":
 { Args: { "p_canonical_url": string,"p_comment"?: string,"p_original_url": string,"p_shared_text"?: string,"p_source"?: string,"p_visibility"?: Database["public"]['Enums']["visibility"] }; Returns: Json
+                           },
+"set_all_scraps_visibility":
+{ Args: { "p_visibility": Database["public"]['Enums']["visibility"] }; Returns: number
                            },
 "username_available":
 { Args: { "p_username": string }; Returns: boolean

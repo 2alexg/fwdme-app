@@ -1,11 +1,10 @@
 import {
-  effectiveVisibility,
   hostnameOf,
   listMyScraps,
   saveScrap,
   scrapTitle,
   type Scrap,
-} from '@scrapbook/core';
+} from '@fwdme/core';
 import { Link, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Image, Pressable, Text, View, useWindowDimensions } from 'react-native';
@@ -21,7 +20,7 @@ import {
   Message,
   Screen,
   VisibilityBadge,
-  VisibilityPicker,
+  NewScrapVisibilityPicker,
   space,
   usePalette,
   type VisibilityChoice,
@@ -39,7 +38,7 @@ const SOURCE_ICON: Record<string, string> = {
 };
 
 export default function LibraryScreen() {
-  const { session, profile } = useSession();
+  const { session } = useSession();
   const { t } = useI18n();
   const c = usePalette();
   const userId = session!.user.id;
@@ -86,7 +85,7 @@ export default function LibraryScreen() {
         {scraps === null ? null : scraps.length === 0 ? (
           <Body muted>{t('emptyLibrary')}</Body>
         ) : (
-          <ScrapGrid scraps={scraps} accountType={profile?.account_type ?? 'private'} />
+          <ScrapGrid scraps={scraps} />
         )}
         {hasMore ? <Button kind="secondary" title={t('loadMore')} onPress={() => load(scraps?.length ?? 0)} /> : null}
       </Screen>
@@ -143,14 +142,14 @@ function AddScrapForm({ onSaved }: { onSaved: () => void }) {
         multiline
         accessibilityLabel={t('addComment')}
       />
-      <VisibilityPicker value={visibility} onChange={setVisibility} />
+      <NewScrapVisibilityPicker value={visibility} onChange={setVisibility} />
       <Message text={message?.text ?? null} tone={message?.tone} />
       <Button title={t('save')} onPress={submit} busy={busy} disabled={!link.trim()} />
     </Card>
   );
 }
 
-function ScrapGrid({ scraps, accountType }: { scraps: Scrap[]; accountType: 'public' | 'private' }) {
+function ScrapGrid({ scraps }: { scraps: Scrap[] }) {
   const { width } = useWindowDimensions();
   const contentWidth = Math.min(width, MAX_WIDTH) - space.lg * 2;
   const columns = contentWidth >= 900 ? 3 : contentWidth >= 560 ? 2 : 1;
@@ -159,14 +158,14 @@ function ScrapGrid({ scraps, accountType }: { scraps: Scrap[]; accountType: 'pub
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.lg }}>
       {scraps.map((s) => (
         <View key={s.id} style={{ width: cardWidth }}>
-          <ScrapCard scrap={s} accountType={accountType} />
+          <ScrapCard scrap={s} />
         </View>
       ))}
     </View>
   );
 }
 
-function ScrapCard({ scrap, accountType }: { scrap: Scrap; accountType: 'public' | 'private' }) {
+function ScrapCard({ scrap }: { scrap: Scrap }) {
   const c = usePalette();
   const { t } = useI18n();
   const firstComment = scrap.comments[0]?.body;
@@ -203,7 +202,7 @@ function ScrapCard({ scrap, accountType }: { scrap: Scrap; accountType: 'public'
             <Text style={{ color: c.muted, fontSize: 12 }}>
               {SOURCE_ICON[scrap.item.source] ?? '🔗'} {hostnameOf(scrap.original_url)}
             </Text>
-            <VisibilityBadge visibility={effectiveVisibility(scrap.visibility, accountType)} />
+            <VisibilityBadge visibility={scrap.visibility} />
             {status === 'failed' ? (
               <Text style={{ color: c.danger, fontSize: 12 }}>{t('failed')}</Text>
             ) : status === 'fetching' || status === 'enriching' ? (

@@ -168,7 +168,7 @@ importers:
 
   apps/app:
     dependencies:
-      '@scrapbook/core':
+      '@fwdme/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@supabase/supabase-js':
