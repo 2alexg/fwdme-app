@@ -3,12 +3,14 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { useI18n } from '@/lib/i18n';
+import { usePendingShare } from '@/lib/pending-share';
 import { supabase } from '@/lib/supabase';
-import { Button, Card, Field, Message, Screen, Title, usePalette } from '@/ui/components';
+import { Body, Button, Card, Field, Message, Screen, Title, usePalette } from '@/ui/components';
 
 export default function SignInScreen() {
   const { t, errorText } = useI18n();
   const c = usePalette();
+  const { payloads } = usePendingShare();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -29,6 +31,7 @@ export default function SignInScreen() {
   return (
     <Screen narrow>
       <Title>{t('appName')}</Title>
+      {payloads.length > 0 ? <Body>{t('shareSignIn')}</Body> : null}
       <Card>
         <Field
           label={t('email')}
