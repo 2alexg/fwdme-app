@@ -13,6 +13,7 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n, type StringKey } from '@/lib/i18n';
 
 // Fwd:Me greens. Every text/background pair meets WCAG AA (4.5:1) in both
@@ -50,12 +51,25 @@ export function usePalette(): Palette {
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 export const MAX_WIDTH = 1080;
 
-export function Screen({ children, narrow }: { children: ReactNode; narrow?: boolean }) {
+/**
+ * The page layout for every screen. Android draws the app edge to edge, under
+ * the status bar and the navigation bar, so the content keeps clear of both:
+ * the bottom inset always, the top one when the screen has no header bar
+ * (`noHeader`; the header already sits below the status bar).
+ */
+export function Screen({ children, narrow, noHeader }: { children: ReactNode; narrow?: boolean; noHeader?: boolean }) {
   const c = usePalette();
+  const insets = useSafeAreaInsets();
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: c.bg }}
-      contentContainerStyle={{ padding: space.lg, alignItems: 'center' }}
+      contentContainerStyle={{
+        paddingTop: space.lg + (noHeader ? insets.top : 0),
+        paddingBottom: space.lg + insets.bottom,
+        paddingLeft: space.lg + insets.left,
+        paddingRight: space.lg + insets.right,
+        alignItems: 'center',
+      }}
       keyboardShouldPersistTaps="handled"
     >
       <View style={{ width: '100%', maxWidth: narrow ? 420 : MAX_WIDTH, gap: space.lg }}>{children}</View>

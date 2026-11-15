@@ -29,7 +29,7 @@ export default function SignInScreen() {
   }
 
   return (
-    <Screen narrow>
+    <Screen noHeader narrow>
       <Brand />
       {payloads.length > 0 ? <Body>{t('shareSignIn')}</Body> : null}
       <Card>
