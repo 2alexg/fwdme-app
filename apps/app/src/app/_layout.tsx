@@ -1,13 +1,19 @@
-import { Stack } from 'expo-router';
+import { Stack, router, usePathname } from 'expo-router';
+import { useCallback, useEffect } from 'react';
+import { Alert, Platform } from 'react-native';
+import { useAuthLinks } from '@/lib/auth-links';
 import { StatusBar } from 'expo-status-bar';
 import { I18nProvider, useI18n } from '@/lib/i18n';
+import { PendingShareProvider, usePendingShare } from '@/lib/pending-share';
 import { SessionProvider, useSession } from '@/lib/session';
 import { Loading, usePalette } from '@/ui/components';
 
 export default function RootLayout() {
   return (
     <SessionProvider>
-      <LocalizedApp />
+      <PendingShareProvider>
+        <LocalizedApp />
+      </PendingShareProvider>
     </SessionProvider>
   );
 }
@@ -27,26 +33,45 @@ function Routes() {
   const { session, loading } = useSession();
   const { t } = useI18n();
   const c = usePalette();
+  const onExpiredLink = useCallback(() => {
+    if (Platform.OS !== 'web') Alert.alert(t('err_link_expired'));
+  }, [t]);
+  useAuthLinks(onExpiredLink);
   if (loading) return <Loading />;
   const signedIn = !!session;
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: c.surface },
-        headerTintColor: c.text,
-        contentStyle: { backgroundColor: c.bg },
-        headerBackTitle: t('back'),
-      }}
-    >
-      <Stack.Protected guard={signedIn} redirectTo="/sign-in">
-        <Stack.Screen name="index" options={{ title: t('library') }} />
-        <Stack.Screen name="scrap/[id]" options={{ title: '' }} />
-        <Stack.Screen name="settings" options={{ title: t('settings') }} />
-      </Stack.Protected>
-      <Stack.Protected guard={!signedIn} redirectTo="/">
-        <Stack.Screen name="sign-in" options={{ title: t('signIn'), headerShown: false }} />
-        <Stack.Screen name="sign-up" options={{ title: t('signUp'), headerShown: false }} />
-      </Stack.Protected>
-    </Stack>
+    <>
+      <ShareRedirect signedIn={signedIn} />
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: c.surface },
+          headerTintColor: c.text,
+          contentStyle: { backgroundColor: c.bg },
+          headerBackTitle: t('back'),
+        }}
+      >
+        <Stack.Protected guard={signedIn} redirectTo="/sign-in">
+          <Stack.Screen name="index" options={{ title: t('library') }} />
+          <Stack.Screen name="scrap/[id]" options={{ title: '' }} />
+          <Stack.Screen name="settings" options={{ title: t('settings') }} />
+          <Stack.Screen name="share" options={{ headerShown: false, gestureEnabled: false }} />
+        </Stack.Protected>
+        <Stack.Protected guard={!signedIn} redirectTo="/">
+          <Stack.Screen name="sign-in" options={{ title: t('signIn'), headerShown: false }} />
+          <Stack.Screen name="sign-up" options={{ title: t('signUp'), headerShown: false }} />
+        </Stack.Protected>
+      </Stack>
+    </>
   );
+}
+
+// Whenever something shared from another app is waiting (including after
+// signing in), open the share screen.
+function ShareRedirect({ signedIn }: { signedIn: boolean }) {
+  const { payloads } = usePendingShare();
+  const pathname = usePathname();
+  useEffect(() => {
+    if (signedIn && payloads.length > 0 && pathname !== '/share') router.push('/share');
+  }, [signedIn, payloads, pathname]);
+  return null;
 }

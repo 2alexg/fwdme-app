@@ -3,6 +3,7 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { useI18n } from '@/lib/i18n';
+import { emailRedirectUrl } from '@/lib/auth-links';
 import { supabase } from '@/lib/supabase';
 import { Button, Card, Field, Message, Screen, Segmented, Title, usePalette } from '@/ui/components';
 
@@ -23,7 +24,13 @@ export default function SignUpScreen() {
     setBusy(true);
     setError(null);
     try {
-      const { session } = await signUp(supabase, { email, password, username: handle, locale });
+      const { session } = await signUp(supabase, {
+        email,
+        password,
+        username: handle,
+        locale,
+        emailRedirectTo: emailRedirectUrl(),
+      });
       // With email confirmation on (production), there is no session yet.
       if (!session) setNotice(t('checkEmail'));
     } catch (e) {

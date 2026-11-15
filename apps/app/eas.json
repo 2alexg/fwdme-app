@@ -1,0 +1,36 @@
+{
+  "cli": {
+    "version": ">= 18.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "base": {
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://rvyystroacoobyhurnrz.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_nWlVe60VgMDJ53Zlns8BmQ_I2PRXRo3"
+      }
+    },
+    "development": {
+      "extends": "base",
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "extends": "base",
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
