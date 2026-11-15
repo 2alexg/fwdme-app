@@ -15,29 +15,31 @@ import {
 } from 'react-native';
 import { useI18n, type StringKey } from '@/lib/i18n';
 
+// Fwd:Me greens. Every text/background pair meets WCAG AA (4.5:1) in both
+// themes; the theme follows the phone's light/dark setting.
 const light = {
-  bg: '#faf8f5',
+  bg: '#f3f7f4',
   surface: '#ffffff',
-  text: '#1d1b19',
-  muted: '#6b6560',
-  border: '#e4dfd8',
-  accent: '#c2410c',
+  text: '#13201a',
+  muted: '#5a6b61',
+  border: '#d6e3da',
+  accent: '#047857',
   accentText: '#ffffff',
   danger: '#b91c1c',
   success: '#15803d',
-  chip: '#f1ece6',
+  chip: '#e6f0e9',
 };
 const dark: typeof light = {
-  bg: '#171513',
-  surface: '#221f1c',
-  text: '#f3efe9',
-  muted: '#a49d95',
-  border: '#3a3530',
-  accent: '#fb923c',
-  accentText: '#1d1b19',
+  bg: '#0d1411',
+  surface: '#15201a',
+  text: '#e6f0ea',
+  muted: '#98aa9f',
+  border: '#28392f',
+  accent: '#34d399',
+  accentText: '#052e1f',
   danger: '#f87171',
   success: '#4ade80',
-  chip: '#2e2a26',
+  chip: '#1d2b23',
 };
 export type Palette = typeof light;
 
@@ -78,6 +80,21 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
 export function Title({ children }: { children: ReactNode }) {
   const c = usePalette();
   return <Text style={{ color: c.text, fontSize: 24, fontWeight: '700', textAlign: 'auto' }}>{children}</Text>;
+}
+
+const LOGO = { light: require('../../assets/logo.png'), dark: require('../../assets/logo-dark.png') };
+
+/** The Fwd:Me symbol above the app name, for the sign-in / sign-up screens. */
+export function Brand() {
+  const { t } = useI18n();
+  const c = usePalette();
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  return (
+    <View style={{ alignItems: 'center', gap: space.sm, paddingTop: space.xl }}>
+      <Image source={LOGO[scheme]} style={{ width: 88, height: 88 }} accessibilityIgnoresInvertColors />
+      <Text style={{ color: c.text, fontSize: 28, fontWeight: '800' }}>{t('appName')}</Text>
+    </View>
+  );
 }
 
 export function Body({ children, muted, small }: { children: ReactNode; muted?: boolean; small?: boolean }) {

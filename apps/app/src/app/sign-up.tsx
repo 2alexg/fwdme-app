@@ -5,7 +5,7 @@ import { Text } from 'react-native';
 import { useI18n } from '@/lib/i18n';
 import { emailRedirectUrl } from '@/lib/auth-links';
 import { supabase } from '@/lib/supabase';
-import { Button, Card, Field, Message, Screen, Segmented, Title, usePalette } from '@/ui/components';
+import { Brand, Button, Card, Field, Message, Screen, Segmented, Title, usePalette } from '@/ui/components';
 
 export default function SignUpScreen() {
   const { t, errorText, locale, setLocale } = useI18n();
@@ -42,6 +42,7 @@ export default function SignUpScreen() {
 
   return (
     <Screen narrow>
+      <Brand />
       <Title>{t('signUp')}</Title>
       <Segmented
         value={locale}
