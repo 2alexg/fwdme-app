@@ -2,7 +2,7 @@
 -- dropped when what they describe changes.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(11);
+select plan(13);
 
 -- A 1024-dim vector pointing mostly along axis 1 (a) or axis 2 (b).
 create function pg_temp.vec(a float, b float) returns extensions.vector
@@ -66,6 +66,30 @@ select is((select embedding from items where canonical_url = 'https://sem.test/p
 update items set embedding = pg_temp.vec(1, 0), embedding_model = 'voyage-4' where canonical_url = 'https://sem.test/pasta';
 select isnt((select embedding from items where canonical_url = 'https://sem.test/pasta'), null,
             'writing an embedding keeps it');
+
+-- Relative rule: in a library where everything is about equally similar,
+-- nothing stands out, so nothing is "related" (even above 0.6).
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('5a333333-3333-3333-3333-333333333333', 'sem_c@test.local', '{"username":"sem_c"}');
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"5a333333-3333-3333-3333-333333333333","role":"authenticated"}';
+insert into t_ids select 'c' || g, (save_scrap('https://sem.test/c' || g, 'https://sem.test/c' || g) ->> 'scrap_id')::uuid
+  from generate_series(0, 7) g;
+reset role;
+update items set status = 'ready', embedding = pg_temp.vec(1, 0) where canonical_url = 'https://sem.test/c0';
+update items set status = 'ready', embedding = pg_temp.vec(1, 0.9 + (substr(canonical_url, 19)::int % 3) * 0.1)
+  where canonical_url in ('https://sem.test/c1', 'https://sem.test/c2', 'https://sem.test/c3',
+                          'https://sem.test/c4', 'https://sem.test/c5', 'https://sem.test/c6');
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"5a333333-3333-3333-3333-333333333333","role":"authenticated"}';
+select is((select count(*)::int from related_scraps((select id from t_ids where k = 'c0'))), 0,
+          'when nothing stands out from the rest of the library, nothing is related');
+reset role;
+update items set embedding = pg_temp.vec(1, 0.05) where canonical_url = 'https://sem.test/c7';
+update items set status = 'ready' where canonical_url = 'https://sem.test/c7';
+set local role authenticated;
+select is((select array_agg(scrap_id) from related_scraps((select id from t_ids where k = 'c0'))),
+          array[(select id from t_ids where k = 'c7')], 'one that clearly stands out is related');
 
 set local role anon;
 select throws_ok($$ select * from match_my_scraps(pg_temp.vec(1, 0)) $$, '42501', null, 'signed-out visitors cannot search');

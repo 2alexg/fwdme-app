@@ -182,7 +182,7 @@ async function embedPending(deadline: number) {
     while (Date.now() < deadline) {
       const { data, error } = await db
         .from('items')
-        .select('id, ai_title, ai_title_he, og_title, og_description, summary_en, summary_he, tags, tag_labels, site_name, raw_text')
+        .select('id, canonical_url, ai_title, ai_title_he, og_title, og_description, summary_en, summary_he, tags, tag_labels, site_name, raw_text')
         .eq('status', 'ready')
         .is('embedding', null)
         .order('updated_at')

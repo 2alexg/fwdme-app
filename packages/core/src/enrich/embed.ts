@@ -11,6 +11,7 @@ const VOYAGE_URL = 'https://api.voyageai.com/v1/embeddings';
 const MAX_PAGE_TEXT = 2000;
 
 export interface EmbeddableItem {
+  canonical_url: string;
   ai_title: string | null;
   ai_title_he: string | null;
   og_title: string | null;
@@ -23,7 +24,11 @@ export interface EmbeddableItem {
   raw_text: string | null;
 }
 
-/** The text an item's embedding describes: both languages, so Hebrew and English queries both land. */
+/**
+ * The text an item's embedding describes: both languages, so Hebrew and English
+ * queries both land. Never empty (Voyage refuses empty input): an item the
+ * worker couldn't read falls back to its URL.
+ */
 export function embeddingText(item: EmbeddableItem): string {
   const labels = (item.tag_labels ?? {}) as Record<string, { en?: string; he?: string } | undefined>;
   const tags = (item.tags ?? []).flatMap((key) => [labels[key]?.en || key.replace(/-/g, ' '), labels[key]?.he ?? '']);
@@ -38,7 +43,8 @@ export function embeddingText(item: EmbeddableItem): string {
     item.site_name,
     item.raw_text ? item.raw_text.replace(/\s+/g, ' ').trim().slice(0, MAX_PAGE_TEXT) : null,
   ];
-  return [...new Set(lines.map((l) => l?.trim()).filter((l): l is string => !!l))].join('\n');
+  const text = [...new Set(lines.map((l) => l?.trim()).filter((l): l is string => !!l))].join('\n');
+  return text || item.canonical_url;
 }
 
 /** pgvector's text form, which PostgREST accepts for a vector column or argument. */

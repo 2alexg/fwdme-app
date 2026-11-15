@@ -3,7 +3,7 @@
 Save anything from any app in one tap, have it organized automatically, and optionally share it.
 Design doc: [Scrapbook App — Product & Technical Design](https://claude.ai/artifact/1eAUAC2aFVSCbnMZ7DZuPM).
 
-**Status:** milestone 4 of 5 in progress — boards and keyword search are in; iOS sharing and search by meaning are next.
+**Status:** milestone 4 of 5 in progress — boards, keyword search and search by meaning are in; iOS sharing is next.
 Sharing works on Android; iOS comes later in milestone 4.
 
 ## Layout
@@ -26,7 +26,7 @@ Needs Node 22+, pnpm, Docker and the Supabase CLI.
 pnpm install
 pnpm db:start                      # local Supabase on :54321 (first run pulls images)
 cp apps/app/.env.example apps/app/.env
-cp supabase/functions/.env.example supabase/functions/.env   # add ANTHROPIC_API_KEY for AI titles/summaries
+cp supabase/functions/.env.example supabase/functions/.env   # add ANTHROPIC_API_KEY (AI titles/summaries), VOYAGE_API_KEY (search by meaning)
 supabase functions serve --env-file supabase/functions/.env  # the enrichment worker (separate terminal)
 pnpm web                           # Expo dev server; press w for the browser (http://localhost:8081)
 ```
@@ -40,7 +40,7 @@ Mailpit at http://127.0.0.1:54324.
 ## Tests
 
 ```sh
-pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards, search (96 checks)
+pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards, search, search by meaning (109 checks)
 pnpm test         # core + enrichment pipeline unit tests, API integration tests against local Supabase
 pnpm typecheck
 pnpm build:web && npx serve -s apps/app/dist -l 8081 &   # then:
@@ -119,6 +119,27 @@ worker isn't served). The e2e run needs the worker served.
   trigram index if libraries grow far beyond that.
 - In the app: a search field in the library (searches as you type, after a short pause), combined
   with the category chips.
+
+## How it works (milestone 4): search by meaning and related scraps
+
+- **Embeddings:** Voyage (`voyage-4`, 1024 dimensions; `EMBED_MODEL` to override) embeds each ready
+  item's titles in both languages, summaries, tags and the first 2000 characters of page text, into
+  `items.embedding` (pgvector). The enrich worker does it after each run, in batches of 64, for every
+  ready item that has none, including older items. When the title, summary or tags change, a trigger
+  drops the embedding so it is made again. Without `VOYAGE_API_KEY` this is off.
+- **Search:** the `semantic-search` Edge Function checks the caller's session, embeds the query (the
+  key never reaches the app) and calls `match_my_scraps()` as the caller. Matches below 0.3 cosine
+  similarity are dropped (good matches score about 0.33–0.6; nonsense queries stay under 0.29). The
+  app shows them as "Similar ideas" under the keyword results, at most 8, half a second after typing
+  stops.
+- **Related in your library:** `related_scraps()` compares the scrap's own embedding with the
+  caller's other scraps, with no API call. Similarities between links run high across the board,
+  so a fixed cut-off doesn't work: a scrap counts as related when it is two standard deviations
+  above this scrap's average similarity to the rest of the library, and at least 0.5. Below 5 other
+  scraps, only 0.6+ counts.
+- No vector index: matches are always within one person's library, and an exact scan is fast.
+- **Voyage rate limits:** without a payment method on the Voyage account, the limit is 3 requests and
+  10K tokens per minute, so searches fail often (the app then shows keyword results only).
 
 ## Phone builds (EAS) and the cloud database
 

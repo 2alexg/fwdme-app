@@ -3,6 +3,7 @@ import { EMBEDDING_DIMENSIONS, embeddingText, toPgVector, voyageEmbed, type Embe
 import { TransientError } from './pipeline.ts';
 
 const ITEM: EmbeddableItem = {
+  canonical_url: 'https://food.test/lemon-pasta',
   ai_title: 'Lemon ricotta pasta',
   ai_title_he: 'פסטה לימון וריקוטה',
   og_title: 'Best Lemon Pasta Ever | Food Blog',
@@ -29,6 +30,12 @@ describe('embeddingText', () => {
   it('works with only page metadata', () => {
     const text = embeddingText({ ...ITEM, ai_title: null, ai_title_he: null, summary_en: null, summary_he: null, tags: [], raw_text: null });
     expect(text).toBe('Best Lemon Pasta Ever | Food Blog\nQuick dinner\nFood Blog');
+  });
+
+  it('falls back to the URL when there is no text at all', () => {
+    const empty = { canonical_url: 'https://x.test/a', ai_title: null, ai_title_he: null, og_title: null, og_description: null,
+      summary_en: null, summary_he: null, tags: null, tag_labels: null, site_name: null, raw_text: '   ' };
+    expect(embeddingText(empty)).toBe('https://x.test/a');
   });
 });
 

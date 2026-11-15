@@ -58,16 +58,20 @@ export default function LibraryScreen() {
   useEffect(() => {
     let cancelled = false;
     if (query.length < 3) return;
-    searchByMeaning(supabase, query, { category: category ?? undefined }).then(
-      (found) => {
-        if (!cancelled) setSimilarFor({ key: `${query}\n${category ?? ''}`, scraps: found });
-      },
-      () => {
-        // Optional extra: keyword results still show.
-      },
-    );
+    // Each search by meaning is a paid API call: wait until typing has really stopped.
+    const timer = setTimeout(() => {
+      searchByMeaning(supabase, query, { category: category ?? undefined, limit: 8 }).then(
+        (found) => {
+          if (!cancelled) setSimilarFor({ key: `${query}\n${category ?? ''}`, scraps: found });
+        },
+        () => {
+          // Optional extra: keyword results still show.
+        },
+      );
+    }, 500);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [query, category]);
 

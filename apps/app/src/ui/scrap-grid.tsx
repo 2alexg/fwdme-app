@@ -36,18 +36,21 @@ export function ScrapList({ scraps }: { scraps: Scrap[] }) {
         const category = categoryLabel(scrap.category, locale);
         return (
           <Link key={scrap.id} href={{ pathname: '/scrap/[id]', params: { id: scrap.id } }} asChild>
-            <Pressable style={({ pressed }) => ({ flexDirection: 'row', gap: space.md, alignItems: 'center', opacity: pressed ? 0.8 : 1 })}>
-              <View style={{ width: 88, borderRadius: 8, overflow: 'hidden' }}>
-                <Thumbnail uri={scrapImageUrl(supabase, scrap)} source={scrap.item.source} />
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text numberOfLines={2} style={{ color: c.text, fontWeight: '600', fontSize: 14, textAlign: 'auto' }}>
-                  {scrapTitle(scrap, locale)}
-                </Text>
-                <Text numberOfLines={1} style={{ color: c.muted, fontSize: 12, textAlign: 'auto' }}>
-                  {category ? `${categoryEmoji(scrap.category)} ${category} · ` : ''}
-                  {hostnameOf(scrap.original_url)}
-                </Text>
+            <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+              {/* The row lives on an inner view: on web the link wrapper drops flexDirection. */}
+              <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
+                <View style={{ width: 88, borderRadius: 8, overflow: 'hidden' }}>
+                  <Thumbnail uri={scrapImageUrl(supabase, scrap)} source={scrap.item.source} />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text numberOfLines={2} style={{ color: c.text, fontWeight: '600', fontSize: 14, textAlign: 'auto' }}>
+                    {scrapTitle(scrap, locale)}
+                  </Text>
+                  <Text numberOfLines={1} style={{ color: c.muted, fontSize: 12, textAlign: 'auto' }}>
+                    {category ? `${categoryEmoji(scrap.category)} ${category} · ` : ''}
+                    {hostnameOf(scrap.original_url)}
+                  </Text>
+                </View>
               </View>
             </Pressable>
           </Link>

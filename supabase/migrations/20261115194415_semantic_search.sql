@@ -68,10 +68,17 @@ $$;
 
 -- "Related in your library": the caller's other scraps closest to this one.
 -- No API call needed; the scrap's own embedding is the query.
+--
+-- Item-to-item similarities run high across the board (0.4-0.5 between
+-- unrelated links), so a fixed cut-off doesn't work. A scrap counts as related
+-- when it is clearly closer than typical for this scrap: at least two standard
+-- deviations above its average similarity to the rest of the library, and at
+-- least p_min_similarity. With fewer than 5 other scraps there is no "typical"
+-- yet, so only very close ones (0.6+) count.
 create function public.related_scraps(
   p_scrap_id uuid,
   p_limit integer default 6,
-  p_min_similarity real default 0.3
+  p_min_similarity real default 0.5
 )
 returns table (scrap_id uuid, similarity real)
 language sql stable security invoker set search_path = '' as $$
@@ -79,14 +86,23 @@ language sql stable security invoker set search_path = '' as $$
     select i.id as item_id, i.embedding
     from public.scraps s join public.items i on i.id = s.item_id
     where s.id = p_scrap_id and i.embedding is not null
+  ),
+  sims as (
+    select s.id, (1 - (i.embedding operator(extensions.<=>) t.embedding))::real as similarity
+    from target t
+    join public.scraps s on s.user_id = (select auth.uid()) and s.item_id <> t.item_id
+    join public.items i on i.id = s.item_id
+    where i.embedding is not null
+  ),
+  stats as (
+    select count(*) as n, avg(similarity) as mean, coalesce(stddev_pop(similarity), 0) as sd from sims
   )
-  select s.id, (1 - (i.embedding operator(extensions.<=>) t.embedding))::real
-  from target t
-  join public.scraps s on s.user_id = (select auth.uid()) and s.item_id <> t.item_id
-  join public.items i on i.id = s.item_id
-  where i.embedding is not null
-    and 1 - (i.embedding operator(extensions.<=>) t.embedding) >= p_min_similarity
-  order by i.embedding operator(extensions.<=>) t.embedding
+  select sims.id, sims.similarity
+  from sims, stats
+  where sims.similarity >= p_min_similarity
+    and case when stats.n >= 5 then sims.similarity >= stats.mean + 2 * stats.sd
+             else sims.similarity >= greatest(p_min_similarity, 0.6) end
+  order by sims.similarity desc
   limit least(greatest(coalesce(p_limit, 6), 1), 50);
 $$;
 

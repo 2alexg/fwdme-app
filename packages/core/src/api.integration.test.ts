@@ -235,8 +235,11 @@ describe.skipIf(!reachable)('api against local supabase', () => {
   });
 
   it.skipIf(!workerUp)('search by meaning answers signed-in users only', async () => {
-    // Without VOYAGE_API_KEY on the server this is switched off and finds nothing.
-    expect(Array.isArray(await searchByMeaning(alice, 'something to cook tonight'))).toBe(true);
+    // Without VOYAGE_API_KEY on the server this is switched off and finds nothing;
+    // with a key it may be rate-limited, which is reported as unavailable.
+    const outcome = await searchByMeaning(alice, 'something to cook tonight').catch((e: ApiError) => e);
+    if (outcome instanceof ApiError) expect(outcome.code).toBe('semantic_search_unavailable');
+    else expect(Array.isArray(outcome)).toBe(true);
     await expect(searchByMeaning(anon, 'something to cook tonight')).rejects.toBeInstanceOf(ApiError);
   });
 

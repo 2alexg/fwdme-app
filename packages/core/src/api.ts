@@ -255,7 +255,11 @@ export async function searchByMeaning(
   const { data, error } = await db.functions.invoke('semantic-search', {
     body: { query, category: opts.category, limit: opts.limit ?? 20 },
   });
-  if (error) throw new ApiError(error.message, 'semantic_search_failed');
+  if (error) {
+    // 503: the embedding service is busy or down (e.g. rate-limited); try again later.
+    const status = (error as { context?: { status?: number } }).context?.status;
+    throw new ApiError(error.message, status === 503 ? 'semantic_search_unavailable' : 'semantic_search_failed');
+  }
   const results = ((data as { results?: { scrap_id: string }[] } | null)?.results ?? []);
   return scrapsInOrder(db, results.map((r) => r.scrap_id));
 }
