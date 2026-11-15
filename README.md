@@ -87,7 +87,7 @@ worker isn't served). The e2e run needs the worker served.
   categories (`packages/core/src/categories.ts`), and tags as language-neutral keys with he/en labels.
   Results are stored on the shared item, so a link saved by many people is organized once. Owner
   comments are never sent; text the sharing app attached (often the caption) is, with an instruction
-  not to repeat personal remarks. Model: `ENRICH_MODEL` secret, default `claude-opus-5-5`.
+  not to repeat personal remarks. Model: `ENRICH_MODEL` secret, default `claude-haiku-5-5` (cheap and fast; set e.g. `claude-sonnet-5-5` for richer summaries).
 - **Retries:** network trouble, 5xx and rate limits retry after 30s, 2m, 10m (4 attempts), then
   `failed`; the owner can tap "Try again" (`retry_item()`). A dead worker's lock expires after 3 min.
 - **Categories:** each scrap keeps an effective `category`: the owner's correction

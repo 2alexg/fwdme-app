@@ -30,7 +30,7 @@ const SERVICE_KEY =
   (JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}') as Record<string, string>).default;
 const WORKER_SECRET = Deno.env.get('WORKER_SECRET') ?? '';
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
-const MODEL = Deno.env.get('ENRICH_MODEL') || 'claude-opus-5-5';
+const MODEL = Deno.env.get('ENRICH_MODEL') || 'claude-haiku-5-5';
 const META_OEMBED_TOKEN = Deno.env.get('META_OEMBED_TOKEN') || undefined;
 const MAX_ATTEMPTS = 4;
 
