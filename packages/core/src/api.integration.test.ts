@@ -6,6 +6,8 @@ import {
   ApiError,
   addComment,
   addScrapToBoard,
+  createShareToken,
+  revokeShareToken,
   createBoard,
   deleteBoard,
   getBoard,
@@ -241,6 +243,14 @@ describe.skipIf(!reachable)('api against local supabase', () => {
     if (outcome instanceof ApiError) expect(outcome.code).toBe('semantic_search_unavailable');
     else expect(Array.isArray(outcome)).toBe(true);
     await expect(searchByMeaning(anon, 'something to cook tonight')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('creates and revokes share tokens for the iOS share sheet', async () => {
+    const token = await createShareToken(alice, 'test iPhone');
+    expect(token).toMatch(/^[0-9a-f]{64}$/);
+    await revokeShareToken(bob, token); // someone else's: no effect, no error
+    await revokeShareToken(alice, token);
+    await expect(createShareToken(anon)).rejects.toBeInstanceOf(ApiError);
   });
 
   it('refuses saves without a session or a link', async () => {

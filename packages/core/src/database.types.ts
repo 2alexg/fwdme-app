@@ -225,6 +225,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"share_tokens": {
+                  Row: {
+                    "created_at": string,"id": string,"label": string | null,"last_used_at": string | null,"token_hash": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"label"?: string | null,"last_used_at"?: string | null,"token_hash": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"label"?: string | null,"last_used_at"?: string | null,"token_hash"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "share_tokens_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "share_tokens_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -245,7 +271,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "match_my_scraps":
+            "create_share_token":
+{ Args: { "p_label"?: string }; Returns: string
+                           },
+"match_my_scraps":
 { Args: { "p_category"?: string,"p_embedding": string,"p_limit"?: number,"p_min_similarity"?: number }; Returns: {
               "scrap_id": string,"similarity": number
             }[]
@@ -271,6 +300,9 @@ isOneToOne: false
 "retry_item":
 { Args: { "p_scrap_id": string }; Returns: boolean
                            },
+"revoke_share_token":
+{ Args: { "p_token": string }; Returns: undefined
+                           },
 "save_scrap":
 { Args: { "p_canonical_url": string,"p_comment"?: string,"p_original_url": string,"p_shared_text"?: string,"p_source"?: string,"p_visibility"?: Database["public"]['Enums']["visibility"] }; Returns: Json
                            },
@@ -281,6 +313,15 @@ isOneToOne: false
                            },
 "set_all_scraps_visibility":
 { Args: { "p_visibility": Database["public"]['Enums']["visibility"] }; Returns: number
+                           },
+"share_add_comment":
+{ Args: { "p_body": string,"p_scrap_id": string,"p_token": string }; Returns: undefined
+                           },
+"share_save":
+{ Args: { "p_canonical_url": string,"p_original_url": string,"p_shared_text"?: string,"p_source": string,"p_token": string }; Returns: Json
+                           },
+"share_set_visibility":
+{ Args: { "p_scrap_id": string,"p_token": string,"p_visibility": Database["public"]['Enums']["visibility"] }; Returns: undefined
                            },
 "username_available":
 { Args: { "p_username": string }; Returns: boolean

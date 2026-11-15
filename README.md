@@ -3,8 +3,8 @@
 Save anything from any app in one tap, have it organized automatically, and optionally share it.
 Design doc: [Scrapbook App — Product & Technical Design](https://claude.ai/artifact/1eAUAC2aFVSCbnMZ7DZuPM).
 
-**Status:** milestone 4 of 5 in progress — boards, keyword search and search by meaning are in; iOS sharing is next.
-Sharing works on Android; iOS comes later in milestone 4.
+**Status:** milestone 4 of 5 — boards, keyword search, search by meaning and link merging are live; the iOS share sheet is being tested.
+Sharing works on Android; on iOS through a native share extension (TestFlight).
 
 ## Layout
 
@@ -40,7 +40,7 @@ Mailpit at http://127.0.0.1:54324.
 ## Tests
 
 ```sh
-pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards, search, search by meaning, merging redirected links (125 checks)
+pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards, search, search by meaning, merging redirected links, share tokens (138 checks)
 pnpm test         # core + enrichment pipeline unit tests, API integration tests against local Supabase
 pnpm typecheck
 pnpm build:web && npx serve -s apps/app/dist -l 8081 &   # then:
@@ -156,6 +156,24 @@ worker isn't served). The e2e run needs the worker served.
 - Canonical URLs also drop Facebook's `share_url` pointer, and AliExpress product pages keep only the
   product ID (`aliexpress.com/item/<id>.html`).
 
+## How it works (milestone 4): the iOS share sheet
+
+- `apps/app/targets/share/` is a native Swift share extension ("Fwd:Me" in the share sheet), added to
+  the iOS build by `@bacons/apple-targets`. No React Native inside: it opens instantly and stays far
+  below iOS's memory limit for extensions. It accepts one web link or text (`Info.plist`).
+- Like the Android share screen, it saves at once, then offers an optional comment and visibility,
+  and closes after 4 seconds unless you use them. Hebrew or English, following the app's language.
+- **Auth:** the extension can't use the app's session (sharing refresh tokens between two processes
+  risks Supabase's reuse detection signing the user out). The signed-in app creates a **share token**
+  for the device (`create_share_token()`; only its SHA-256 hash is stored) and puts it, with the
+  server URL, publishable key and language, in the App Group `group.app.fwdme.mobile`
+  (`src/lib/share-token.ios.ts`). Signing out revokes it. If the server refuses a token, the
+  extension flags it and the app makes a new one on its next launch.
+- The extension posts what was shared to the `share` Edge Function, which finds the link with the
+  same code as the app (`shareToSave`, `normalizeLink`) and calls `share_save()` /
+  `share_add_comment()` / `share_set_visibility()`. Those are service-role only and run the
+  regular paths as the token's user, so row-level security and `save_scrap()`'s checks apply.
+
 ## Phone builds (EAS) and the cloud database
 
 - Expo project: `@fwdme4s-team/fwdme`. Build profiles are in `apps/app/eas.json`; the cloud Supabase
@@ -166,6 +184,9 @@ worker isn't served). The e2e run needs the worker served.
   cd apps/app && npx eas-cli@latest build --platform android --profile preview
   ```
 
+- iOS (TestFlight): `cd apps/app && npx eas-cli@latest build --platform ios --profile production --auto-submit`.
+  The first run is interactive: it signs in to Apple and creates the certificates and the
+  provisioning profiles for the app and the share extension (App Group included).
 - Cloud Supabase project `fwd:me-app` (`rvyystroacoobyhurnrz`, eu-west-1) is linked. Apply new
   migrations with `supabase db push --remote --dry-run`, then without `--dry-run`.
 - Sharing: Android registers Fwd:Me as a share target for text/links (`expo-sharing` plugin in
