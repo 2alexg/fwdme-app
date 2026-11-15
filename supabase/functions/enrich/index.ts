@@ -175,7 +175,15 @@ async function drain() {
 // ---------------------------------------------------------------------------
 
 async function embedPending(deadline: number) {
-  if (!VOYAGE_API_KEY) return;
+  if (!VOYAGE_API_KEY) {
+    // Feature off: note the visit so pg_cron doesn't wake us every minute for these.
+    await db
+      .from('items')
+      .update({ embed_attempted_at: new Date().toISOString() })
+      .eq('status', 'ready')
+      .is('embedding', null);
+    return;
+  }
   let embedded = 0;
   let tokens = 0;
   try {
@@ -190,6 +198,11 @@ async function embedPending(deadline: number) {
       if (error) throw new Error(`db: ${error.message}`);
       const items = (data ?? []) as (EmbeddableItem & { id: string })[];
       if (items.length === 0) break;
+      // Marked before the call: if it fails, pg_cron tries these again in 15 minutes.
+      await db
+        .from('items')
+        .update({ embed_attempted_at: new Date().toISOString() })
+        .in('id', items.map((item) => item.id));
       const out = await voyageEmbed(items.map(embeddingText), 'document', { apiKey: VOYAGE_API_KEY, model: EMBED_MODEL });
       tokens += out.tokens;
       const now = new Date().toISOString();
