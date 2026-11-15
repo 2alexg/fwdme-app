@@ -244,6 +244,11 @@ isOneToOne: false
 "save_scrap":
 { Args: { "p_canonical_url": string,"p_comment"?: string,"p_original_url": string,"p_shared_text"?: string,"p_source"?: string,"p_visibility"?: Database["public"]['Enums']["visibility"] }; Returns: Json
                            },
+"search_my_scraps":
+{ Args: { "p_category"?: string,"p_limit"?: number,"p_offset"?: number,"p_query": string }; Returns: {
+              "rank": number,"scrap_id": string
+            }[]
+                           },
 "set_all_scraps_visibility":
 { Args: { "p_visibility": Database["public"]['Enums']["visibility"] }; Returns: number
                            },

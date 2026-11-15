@@ -13,6 +13,7 @@ import {
   removeScrapFromBoard,
   renameBoard,
   reorderBoards,
+  searchMyScraps,
   countScrapsNotIn,
   deleteComment,
   deleteScrap,
@@ -212,6 +213,17 @@ describe.skipIf(!reachable)('api against local supabase', () => {
     await deleteBoard(alice, rome.id);
     expect(await getScrap(alice, one.scrapId)).toMatchObject({ boards: [] });
     await expect(deleteBoard(bob, desserts.id)).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('searches my own library', async () => {
+    const { scrapId } = await saveScrap(alice, { input: `https://example.com/search-${run}`, comment: `shakshuka ${run}` });
+    await saveScrap(bob, { input: `https://example.com/search-bob-${run}`, comment: `shakshuka ${run}` });
+    expect((await searchMyScraps(alice, `SHAKSHUKA ${run}`)).map((s) => s.id)).toEqual([scrapId]);
+    const [hit] = await searchMyScraps(alice, `shakshuka ${run}`);
+    expect(hit!.comments[0]!.body).toBe(`shakshuka ${run}`);
+    expect(await searchMyScraps(alice, `shakshuka ${run} nothing-like-this`)).toEqual([]);
+    expect(await searchMyScraps(alice, '   ')).toEqual([]);
+    expect(await searchMyScraps(alice, `shakshuka ${run}`, { category: 'travel' })).toEqual([]);
   });
 
   it('refuses saves without a session or a link', async () => {

@@ -63,6 +63,20 @@ await page.getByRole('button', { name: 'Save' }).click();
 await page.getByText("That doesn't look like a web link.").waitFor();
 await page.getByPlaceholder('Paste a link…').fill('');
 step('non-links are rejected with a message');
+
+// Search: by the organized title and by my own comment; nothing for nonsense
+const search = page.getByPlaceholder('Search your library…');
+await search.fill('astley');
+await page.waitForFunction(() => document.querySelectorAll('a[href^="/scrap/"]').length === 1);
+await page.getByText('Lemon pasta for Friday').waitFor();
+await search.fill('FRIDAY lemon');
+await page.waitForTimeout(800);
+if ((await page.locator('a[href^="/scrap/"]').count()) !== 1) throw new Error('comment search should find one scrap');
+await search.fill('zzqx nothing');
+await page.getByText('Nothing matches your search.').waitFor();
+await page.getByRole('button', { name: 'Clear search' }).click();
+await page.waitForFunction(() => document.querySelectorAll('a[href^="/scrap/"]').length === 2);
+step('search finds scraps by title and by my comments; clearing shows everything again');
 await page.screenshot({ path: `${out}/library.png`, fullPage: true });
 
 // Detail: comments, edit, visibility

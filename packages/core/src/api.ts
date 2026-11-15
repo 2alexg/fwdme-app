@@ -211,6 +211,33 @@ export async function listMyScraps(
   return sortComments(rows);
 }
 
+/**
+ * Searches my library: every word must appear in the title, tags, my comments,
+ * summary, site or page text (Hebrew prefixes and niqqud are handled). Best
+ * matches first.
+ */
+export async function searchMyScraps(
+  db: Db,
+  query: string,
+  opts: { limit?: number; offset?: number; category?: string } = {},
+): Promise<Scrap[]> {
+  if (!query.trim()) return [];
+  const hits = unwrap(
+    await db.rpc('search_my_scraps', {
+      p_query: query,
+      p_category: opts.category ?? undefined,
+      p_limit: opts.limit ?? 30,
+      p_offset: opts.offset ?? 0,
+    }),
+  ) as { scrap_id: string; rank: number }[];
+  if (hits.length === 0) return [];
+  const rows = unwrap(
+    await db.from('scraps').select(SCRAP_FIELDS).in('id', hits.map((h) => h.scrap_id)),
+  ) as unknown as Scrap[];
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return sortComments(hits.map((h) => byId.get(h.scrap_id)).filter((r): r is Scrap => !!r));
+}
+
 export async function getScrap(db: Db, scrapId: string): Promise<Scrap | null> {
   const row = unwrap(
     await db
