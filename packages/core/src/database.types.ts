@@ -23,7 +23,59 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "follows": {
+            "board_scraps": {
+                  Row: {
+                    "added_at": string,"board_id": string,"scrap_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "added_at"?: string,"board_id": string,"scrap_id": string
+                  }
+                  Update: {
+                    "added_at"?: string,"board_id"?: string,"scrap_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "board_scraps_board_id_fkey"
+      columns: ["board_id"]
+isOneToOne: false
+      referencedRelation: "boards"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "board_scraps_scrap_id_fkey"
+      columns: ["scrap_id"]
+isOneToOne: false
+      referencedRelation: "scraps"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"boards": {
+                  Row: {
+                    "created_at": string,"id": string,"name": string,"position": number,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"name": string,"position"?: number,"updated_at"?: string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"name"?: string,"position"?: number,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "boards_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "boards_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"follows": {
                   Row: {
                     "created_at": string,"followee_id": string,"follower_id": string,"id": string
                   }
@@ -173,10 +225,18 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "my_category_counts":
+            "my_boards":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "covers": Json,"created_at": string,"id": string,"name": string,"position": number,"scraps": number
+            }[]
+                           },
+"my_category_counts":
 { Args: Record<PropertyKey, never>; Returns: {
               "category": string,"scraps": number
             }[]
+                           },
+"reorder_boards":
+{ Args: { "p_ids": (string)[] }; Returns: undefined
                            },
 "retry_item":
 { Args: { "p_scrap_id": string }; Returns: boolean

@@ -58,6 +58,8 @@ function Routes() {
           <Stack.Screen name="index" options={{ title: t('library') }} />
           <Stack.Screen name="scrap/[id]" options={{ title: '' }} />
           <Stack.Screen name="settings" options={{ title: t('settings') }} />
+          <Stack.Screen name="boards" options={{ title: t('boards') }} />
+          <Stack.Screen name="board/[id]" options={{ title: '' }} />
           <Stack.Screen name="share" options={{ headerShown: false, gestureEnabled: false }} />
         </Stack.Protected>
         <Stack.Protected guard={!signedIn} redirectTo="/">

@@ -91,6 +91,44 @@ const checked = await page.getByRole('radio', { name: 'Only me' }).getAttribute(
 if (checked !== 'true') throw new Error(`visibility not persisted (aria-checked=${checked})`);
 step('reload keeps session, comments and visibility');
 
+// Boards: make one from the scrap, manage them on the boards screen
+await page.getByPlaceholder('New board').fill('Weeknight dinners');
+await page.getByRole('button', { name: 'Create', exact: true }).click();
+await page.getByRole('button', { name: '✓ Weeknight dinners' }).waitFor();
+step('a new board made from a scrap has the scrap on it');
+await page.goto(`${BASE}/boards`);
+await page.getByText('1 scrap', { exact: true }).waitFor();
+await page.getByPlaceholder('Name a new board').fill('Desserts');
+await page.getByRole('button', { name: 'Create', exact: true }).click();
+await page.getByText('Nothing on this board yet').waitFor();
+await page.goto(`${BASE}/boards`);
+await page.getByPlaceholder('Name a new board').fill('desserts');
+await page.getByRole('button', { name: 'Create', exact: true }).click();
+await page.getByText('You already have a board with this name.').waitFor();
+await page.getByText('Reorder').click();
+await page.getByRole('button', { name: 'Move up' }).last().click();
+await page.getByText('Done', { exact: true }).click();
+await page.waitForTimeout(500);
+await page.reload();
+await page.getByText('Desserts').waitFor();
+const order = await page.locator('a[href^="/board/"]').allTextContents();
+if (!/^\W*Desserts/u.test(order[0] ?? '')) throw new Error(`reorder not saved: ${order.join(' | ')}`);
+await page.screenshot({ path: `${out}/boards.png`, fullPage: true });
+step('boards screen: counts, create, duplicate name refused, reorder saved');
+await page.getByText('Weeknight dinners').click();
+await page.getByText('Lemon pasta for Friday').waitFor();
+await page.getByRole('button', { name: 'Rename' }).click();
+await page.locator('input:visible').first().fill('Friday dinners');
+await page.getByRole('button', { name: 'Save' }).click();
+await page.getByText('Friday dinners').first().waitFor();
+await page.screenshot({ path: `${out}/board.png`, fullPage: true });
+await page.getByText('Lemon pasta for Friday').click();
+await page.getByRole('button', { name: '✓ Friday dinners' }).click();
+await page.getByRole('button', { name: 'Friday dinners', exact: true }).waitFor();
+await page.goBack();
+await page.getByText('Nothing on this board yet').waitFor();
+step('board page lists its scraps, renames; removing a scrap from a board updates it');
+
 // Delete the other scrap from its detail page
 page.on('dialog', (d) => d.accept());
 await page.goto(`${BASE}/`);

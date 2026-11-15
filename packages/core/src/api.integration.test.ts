@@ -5,6 +5,14 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import {
   ApiError,
   addComment,
+  addScrapToBoard,
+  createBoard,
+  deleteBoard,
+  getBoard,
+  listMyBoards,
+  removeScrapFromBoard,
+  renameBoard,
+  reorderBoards,
   countScrapsNotIn,
   deleteComment,
   deleteScrap,
@@ -165,6 +173,45 @@ describe.skipIf(!reachable)('api against local supabase', () => {
     expect(scrap.item.og_title).toBe('Example Domain');
     expect(scrapTitle(scrap, 'en')).toBeTruthy();
     expect(scrapImageUrl(alice, scrap)).toBeNull(); // example.com has no preview image
+  });
+
+  it('organizes scraps on boards', async () => {
+    const one = await saveScrap(alice, { input: `https://example.com/board-1-${run}` });
+    const two = await saveScrap(alice, { input: `https://example.com/board-2-${run}` });
+    const desserts = await createBoard(alice, '  Vegan desserts ');
+    expect(desserts.name).toBe('Vegan desserts');
+    const rome = await createBoard(alice, 'Trip to Rome');
+    await expect(createBoard(alice, 'VEGAN desserts')).rejects.toThrow('board_name_taken');
+    await expect(createBoard(alice, '   ')).rejects.toThrow('empty_board_name');
+
+    await addScrapToBoard(alice, one.scrapId, desserts.id);
+    await addScrapToBoard(alice, one.scrapId, desserts.id); // twice is fine
+    await addScrapToBoard(alice, two.scrapId, desserts.id);
+    await addScrapToBoard(alice, one.scrapId, rome.id);
+    await expect(addScrapToBoard(bob, one.scrapId, desserts.id)).rejects.toBeInstanceOf(ApiError);
+
+    const onBoard = await listMyScraps(alice, aliceId, { boardId: desserts.id });
+    expect(onBoard.map((s) => s.id).sort()).toEqual([one.scrapId, two.scrapId].sort());
+    // Every board the scrap is on, not only the filtered one.
+    expect(onBoard.find((s) => s.id === one.scrapId)!.boards.map((b) => b.board_id).sort())
+      .toEqual([desserts.id, rome.id].sort());
+    expect((await getScrap(alice, two.scrapId))!.boards).toEqual([{ board_id: desserts.id }]);
+
+    let boards = await listMyBoards(alice);
+    expect(boards.map((b) => [b.name, b.scraps])).toEqual([['Vegan desserts', 2], ['Trip to Rome', 1]]);
+    expect(await listMyBoards(bob)).toEqual([]);
+    expect(await getBoard(bob, desserts.id)).toBeNull();
+
+    await reorderBoards(alice, [rome.id, desserts.id]);
+    await renameBoard(alice, rome.id, 'Rome 2027');
+    await expect(renameBoard(alice, rome.id, 'vegan desserts')).rejects.toThrow('board_name_taken');
+    await removeScrapFromBoard(alice, one.scrapId, desserts.id);
+    boards = await listMyBoards(alice);
+    expect(boards.map((b) => [b.name, b.scraps])).toEqual([['Rome 2027', 1], ['Vegan desserts', 1]]);
+
+    await deleteBoard(alice, rome.id);
+    expect(await getScrap(alice, one.scrapId)).toMatchObject({ boards: [] });
+    await expect(deleteBoard(bob, desserts.id)).rejects.toBeInstanceOf(ApiError);
   });
 
   it('refuses saves without a session or a link', async () => {
