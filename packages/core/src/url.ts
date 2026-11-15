@@ -19,7 +19,7 @@ export class InvalidUrlError extends Error {
 const TRACKING_PARAMS = new Set([
   'fbclid', 'gclid', 'dclid', 'msclkid', 'yclid', 'igshid', 'igsh', 'mc_cid', 'mc_eid',
   '_hsenc', '_hsmi', 'ref_src', 'ref_url', 'share_id', 'sender_device', 'is_from_webapp',
-  'is_copy_url', 'mibextid', 'rdid', 'feature', 'pp',
+  'is_copy_url', 'mibextid', 'rdid', 'feature', 'pp', 'share_url',
 ]);
 const TRACKING_PREFIXES = ['utm_', 'hsa_', 'pk_', 'mtm_'];
 
@@ -82,7 +82,12 @@ export function normalizeLink(input: string): NormalizedLink {
     url.hostname = url.hostname.replace(/^(m|mobile)\./, '');
   }
 
-  if (PATH_ONLY_SOURCES.has(source)) {
+  // AliExpress product pages carry pages of tracking in the query; the product
+  // ID in the path is the whole identity. (he.aliexpress.com, m.aliexpress.us…)
+  const aliexpressItem = /(^|\.)aliexpress\.(com|us|ru)$/.test(url.hostname) && /^\/item\/\d+\.html$/.test(url.pathname);
+  if (aliexpressItem) url.hostname = 'aliexpress.com';
+
+  if (PATH_ONLY_SOURCES.has(source) || aliexpressItem) {
     url.search = '';
   } else {
     const kept = [...url.searchParams.entries()]

@@ -113,6 +113,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"item_aliases": {
+                  Row: {
+                    "created_at": string,"item_id": string,"url": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"item_id": string,"url": string
+                  }
+                  Update: {
+                    "created_at"?: string,"item_id"?: string,"url"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "item_aliases_item_id_fkey"
+      columns: ["item_id"]
+isOneToOne: false
+      referencedRelation: "items"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"items": {
                   Row: {
                     "ai_title": string | null,"ai_title_he": string | null,"attempts": number,"author_name": string | null,"canonical_url": string,"category": string | null,"content_language": string | null,"created_at": string,"embed_attempted_at": string | null,"embedded_at": string | null,"embedding": string | null,"embedding_model": string | null,"enriched_at": string | null,"error": string | null,"extracted_json": Json | null,"id": string,"image_path": string | null,"locked_until": string | null,"next_attempt_at": string,"og_description": string | null,"og_image": string | null,"og_title": string | null,"raw_text": string | null,"resolved_url": string | null,"search_summary": string | null,"search_tags": string | null,"search_text": string | null,"search_title": string | null,"site_name": string | null,"source": string,"status": Database["public"]['Enums']["item_status"],"summary_en": string | null,"summary_he": string | null,"tag_labels": NonNullable<Json>,"tags": (string)[],"updated_at": string
@@ -309,7 +329,10 @@ isOneToOne: false
         to: "items"
         isOneToOne: false
         isSetofReturn: true
-      } }
+      } },
+"worker_resolve_item":
+{ Args: { "p_canonical_url": string,"p_item": string,"p_source": string }; Returns: Json
+                           }
           }
           Enums: {
             "account_type": "public"|"private","item_status": "pending"|"fetching"|"enriching"|"ready"|"failed","visibility": "private"|"followers"|"public"

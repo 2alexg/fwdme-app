@@ -58,6 +58,25 @@ describe('normalizeLink', () => {
   });
 });
 
+describe('normalizeLink: store links', () => {
+  it('keeps only the product ID for AliExpress item pages, on any AliExpress host', () => {
+    const long = 'https://he.aliexpress.com/item/1005010620866954.html?_t=gps-id%3Amsite&aff_platform=msite&spm=a2g0n.home.1';
+    expect(normalizeLink(long).canonicalUrl).toBe('https://aliexpress.com/item/1005010620866954.html');
+    expect(normalizeLink('https://www.aliexpress.us/item/1005010620866954.html?x=1').canonicalUrl)
+      .toBe('https://aliexpress.com/item/1005010620866954.html');
+  });
+
+  it('leaves other AliExpress pages (search, stores) alone', () => {
+    expect(normalizeLink('https://aliexpress.com/w/wholesale-lamp.html?SearchText=lamp').canonicalUrl)
+      .toBe('https://aliexpress.com/w/wholesale-lamp.html?SearchText=lamp');
+  });
+
+  it("drops Facebook's share_url pointer", () => {
+    const resolved = 'https://www.facebook.com/groups/530043800813626/permalink/2593465697804749/?rdid=cxPq&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2Fp%2F1JDfNKvDgp';
+    expect(normalizeLink(resolved).canonicalUrl).toBe('https://facebook.com/groups/530043800813626/permalink/2593465697804749');
+  });
+});
+
 describe('detectSource', () => {
   it.each([
     ['www.facebook.com', 'facebook'],
