@@ -29,11 +29,34 @@
       "expo-router",
       "expo-status-bar",
       "expo-sqlite",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-sharing",
+        {
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": [
+              "text/plain"
+            ],
+            "multipleShareMimeTypes": [
+              "text/plain"
+            ]
+          },
+          "ios": {
+            "enabled": false
+          }
+        }
+      ]
     ],
     "scheme": "fwdme",
     "experiments": {
       "typedRoutes": true
+    },
+    "owner": "fwdme4s-team",
+    "extra": {
+      "eas": {
+        "projectId": "909d231a-c9b1-4123-b4f0-6f704585c50e"
+      }
     }
   }
 }

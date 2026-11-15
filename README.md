@@ -3,7 +3,7 @@
 Save anything from any app in one tap, have it organized automatically, and optionally share it.
 Design doc: [Scrapbook App — Product & Technical Design](https://claude.ai/artifact/1eAUAC2aFVSCbnMZ7DZuPM).
 
-**Status:** milestone 1 of 5 — repo skeleton, auth, and the web library.
+**Status:** milestone 2 of 5 in progress — sharing to the app on Android (iOS moves to milestone 4).
 
 ## Layout
 
@@ -63,6 +63,23 @@ Integration tests skip themselves when local Supabase isn't running.
   extensions in milestone 2 will call the same function.
 - **Languages:** Hebrew (default) and English, chosen at sign-up and in Settings. On web the
   document switches to `dir="rtl"`. Native RTL comes with the Hebrew/RTL polish milestone.
+
+## Phone builds (EAS) and the cloud database
+
+- Expo project: `@fwdme4s-team/fwdme`. Build profiles are in `apps/app/eas.json`; the cloud Supabase
+  URL and publishable key are baked in at build time from there.
+- Android test build (installable APK, link + QR code on expo.dev):
+
+  ```sh
+  cd apps/app && npx eas-cli@latest build --platform android --profile preview
+  ```
+
+- Cloud Supabase project `fwd:me-app` (`rvyystroacoobyhurnrz`, eu-west-1) is linked. Apply new
+  migrations with `supabase db push --remote --dry-run`, then without `--dry-run`.
+- Sharing: Android registers Fwd:Me as a share target for text/links (`expo-sharing` plugin in
+  `app.json`). A share opens `fwdme://expo-sharing`, which routes to `src/app/share.tsx`.
+- Email confirmation links redirect to `fwdme://` (allowed under Supabase → Authentication → URL
+  Configuration); the app signs the user in from the tokens in that link.
 
 ## Changing the schema
 

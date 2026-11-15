@@ -68,6 +68,17 @@ const en = {
   language: 'Language',
   saveChanges: 'Save changes',
   changesSaved: 'Saved',
+  // share (from other apps)
+  shareSaving: 'Saving…',
+  shareSaved: 'Saved to Fwd:Me',
+  shareAlreadySaved: 'Already in your library',
+  shareNoLink: "There's no link in what you shared. Fwd:Me saves links for now.",
+  shareAutoClose: 'Closing in a moment — tap to add a comment.',
+  shareSignIn: 'Sign in to save what you shared.',
+  done: 'Done',
+  openInApp: 'Open in Fwd:Me',
+  retry: 'Try again',
+  close: 'Close',
   // errors
   err_generic: 'Something went wrong. Please try again.',
   err_invalid_url: "That doesn't look like a web link.",
@@ -77,6 +88,7 @@ const en = {
   err_invalid_credentials: 'Wrong email or password.',
   err_email_taken: 'An account with this email already exists.',
   err_empty_comment: 'Write something first.',
+  err_link_expired: 'This email link has expired or was already used. Sign in with your email and password.',
 };
 
 export type StringKey = keyof typeof en;
@@ -142,6 +154,16 @@ const he: Record<StringKey, string> = {
   language: 'שפה',
   saveChanges: 'שמירת שינויים',
   changesSaved: 'נשמר',
+  shareSaving: 'שומר…',
+  shareSaved: 'נשמר ב-Fwd:Me',
+  shareAlreadySaved: 'כבר בספרייה שלך',
+  shareNoLink: 'לא נמצא קישור במה ששיתפת. כרגע Fwd:Me שומר קישורים.',
+  shareAutoClose: 'נסגר עוד רגע — הקישו כדי להוסיף הערה.',
+  shareSignIn: 'התחברו כדי לשמור את מה ששיתפתם.',
+  done: 'סיום',
+  openInApp: 'פתיחה ב-Fwd:Me',
+  retry: 'נסו שוב',
+  close: 'סגירה',
   err_generic: 'משהו השתבש. נסו שוב.',
   err_invalid_url: 'זה לא נראה כמו קישור.',
   err_invalid_username: 'שם משתמש: 3–30 תווים, a–z, 0–9 או _.',
@@ -150,6 +172,7 @@ const he: Record<StringKey, string> = {
   err_invalid_credentials: 'אימייל או סיסמה שגויים.',
   err_email_taken: 'כבר קיים חשבון עם האימייל הזה.',
   err_empty_comment: 'כתבו משהו קודם.',
+  err_link_expired: 'הקישור באימייל פג תוקף או שכבר נעשה בו שימוש. התחברו עם האימייל והסיסמה.',
 };
 
 const dictionaries: Record<Locale, Record<StringKey, string>> = { en, he };

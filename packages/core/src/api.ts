@@ -77,7 +77,14 @@ export async function usernameAvailable(db: Db, username: string): Promise<boole
 
 export async function signUp(
   db: Db,
-  input: { email: string; password: string; username: string; locale: Locale },
+  input: {
+    email: string;
+    password: string;
+    username: string;
+    locale: Locale;
+    /** Where the confirmation email's link sends people (e.g. fwdme:// on phones). */
+    emailRedirectTo?: string;
+  },
 ) {
   const username = input.username.trim().toLowerCase();
   if (!USERNAME_PATTERN.test(username)) throw new ApiError('invalid_username');
@@ -87,7 +94,7 @@ export async function signUp(
     await db.auth.signUp({
       email: input.email.trim(),
       password: input.password,
-      options: { data: { username, locale: input.locale } },
+      options: { data: { username, locale: input.locale }, emailRedirectTo: input.emailRedirectTo },
     }),
   );
 }
