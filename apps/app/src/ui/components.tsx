@@ -82,6 +82,21 @@ export function Title({ children }: { children: ReactNode }) {
   return <Text style={{ color: c.text, fontSize: 24, fontWeight: '700', textAlign: 'auto' }}>{children}</Text>;
 }
 
+const LOGO = { light: require('../../assets/logo.png'), dark: require('../../assets/logo-dark.png') };
+
+/** The Fwd:Me symbol above the app name, for the sign-in / sign-up screens. */
+export function Brand() {
+  const { t } = useI18n();
+  const c = usePalette();
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  return (
+    <View style={{ alignItems: 'center', gap: space.sm, paddingTop: space.xl }}>
+      <Image source={LOGO[scheme]} style={{ width: 88, height: 88 }} accessibilityIgnoresInvertColors />
+      <Text style={{ color: c.text, fontSize: 28, fontWeight: '800' }}>{t('appName')}</Text>
+    </View>
+  );
+}
+
 export function Body({ children, muted, small }: { children: ReactNode; muted?: boolean; small?: boolean }) {
   const c = usePalette();
   return (

@@ -45,6 +45,18 @@
             "enabled": false
           }
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#14532D",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#14532D"
+          }
+        }
       ]
     ],
     "scheme": "fwdme",

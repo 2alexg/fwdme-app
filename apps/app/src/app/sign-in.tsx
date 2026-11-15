@@ -5,7 +5,7 @@ import { Text } from 'react-native';
 import { useI18n } from '@/lib/i18n';
 import { usePendingShare } from '@/lib/pending-share';
 import { supabase } from '@/lib/supabase';
-import { Body, Button, Card, Field, Message, Screen, Title, usePalette } from '@/ui/components';
+import { Body, Brand, Button, Card, Field, Message, Screen, usePalette } from '@/ui/components';
 
 export default function SignInScreen() {
   const { t, errorText } = useI18n();
@@ -30,7 +30,7 @@ export default function SignInScreen() {
 
   return (
     <Screen narrow>
-      <Title>{t('appName')}</Title>
+      <Brand />
       {payloads.length > 0 ? <Body>{t('shareSignIn')}</Body> : null}
       <Card>
         <Field
