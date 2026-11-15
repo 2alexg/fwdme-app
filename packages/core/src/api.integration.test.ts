@@ -11,8 +11,13 @@ import {
   editComment,
   getMyProfile,
   getScrap,
+  isProcessing,
   listMyScraps,
+  myCategoryCounts,
+  retryScrap,
   saveScrap,
+  scrapImageUrl,
+  setScrapCategory,
   scrapTitle,
   setAllScrapsVisibility,
   setScrapVisibility,
@@ -30,6 +35,8 @@ const KEY = process.env.SUPABASE_PUBLISHABLE_KEY ?? 'sb_publishable_ACJWlzQHlZjB
 const reachable = await fetch(`${URL}/auth/v1/health`, { headers: { apikey: KEY } })
   .then((r) => r.ok)
   .catch(() => false);
+// The enrich Edge Function answers GET with 405 when it is being served.
+const workerUp = reachable && (await fetch(`${URL}/functions/v1/enrich`).then((r) => r.status === 405).catch(() => false));
 
 const client = (): Db =>
   createClient<Database>(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -78,8 +85,8 @@ describe.skipIf(!reachable)('api against local supabase', () => {
     expect(list).toHaveLength(1);
     const scrap = list[0]!;
     expect(scrap.item.canonical_url).toBe(`https://example.com/pasta-${run}`);
-    expect(scrap.item.status).toBe('pending');
-    expect(scrapTitle(scrap)).toBe('example.com');
+    expect(scrap.item.status).not.toBe('failed');
+    expect(scrap.category).toBeNull();
     expect(scrap.comments.map((c) => c.body)).toEqual(['for Friday dinner']);
 
     const c2 = await addComment(alice, scrap.id, '  double the lemon  ');
@@ -128,6 +135,36 @@ describe.skipIf(!reachable)('api against local supabase', () => {
     await setAllScrapsVisibility(alice, 'private');
     expect((await getScrap(bob, bobs.scrapId))!.visibility).toBe('private');
     expect(await getScrap(anon, bobs.scrapId)).toBeNull();
+  });
+
+  it('lets the owner correct the category and counts by category', async () => {
+    const { scrapId } = await saveScrap(alice, { input: `https://example.com/cat-${run}` });
+    expect(await setScrapCategory(alice, scrapId, 'travel')).toBe('travel');
+    expect((await listMyScraps(alice, aliceId, { category: 'travel' })).map((s) => s.id)).toEqual([scrapId]);
+    expect(await listMyScraps(alice, aliceId, { category: 'humor' })).toEqual([]);
+    expect(await myCategoryCounts(alice)).toEqual([{ category: 'travel', scraps: 1 }]);
+    expect(await myCategoryCounts(bob)).toEqual([]);
+    await expect(setScrapCategory(bob, scrapId, 'humor')).rejects.toBeInstanceOf(ApiError);
+    expect(await setScrapCategory(alice, scrapId, null)).toBeNull();
+  });
+
+  it('only retries links that failed, and only for their owner', async () => {
+    const { scrapId } = await saveScrap(alice, { input: `https://example.com/retry-${run}` });
+    expect(await retryScrap(alice, scrapId)).toBe(false);
+    expect(await retryScrap(bob, scrapId)).toBe(false);
+  });
+
+  it.skipIf(!workerUp)('organizes a saved link in the background', { timeout: 40_000 }, async () => {
+    const { scrapId } = await saveScrap(alice, { input: `https://example.com/?fwdme=${run}` });
+    let scrap = (await getScrap(alice, scrapId))!;
+    for (let i = 0; i < 30 && isProcessing(scrap); i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      scrap = (await getScrap(alice, scrapId))!;
+    }
+    expect(scrap.item.status).toBe('ready');
+    expect(scrap.item.og_title).toBe('Example Domain');
+    expect(scrapTitle(scrap, 'en')).toBeTruthy();
+    expect(scrapImageUrl(alice, scrap)).toBeNull(); // example.com has no preview image
   });
 
   it('refuses saves without a session or a link', async () => {

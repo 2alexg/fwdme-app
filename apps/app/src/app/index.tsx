@@ -1,24 +1,33 @@
 import {
+  categoryEmoji,
+  categoryLabel,
   hostnameOf,
+  isProcessing,
   listMyScraps,
+  myCategoryCounts,
   saveScrap,
+  scrapImageUrl,
   scrapTitle,
   type Scrap,
 } from '@fwdme/core';
 import { Link, Stack, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Image, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
+import { usePollWhile } from '@/lib/use-poll';
 import {
   Body,
   Button,
   Card,
+  Chip,
   Field,
   MAX_WIDTH,
   Message,
   Screen,
+  SOURCE_ICON,
+  Thumbnail,
   VisibilityBadge,
   NewScrapVisibilityPicker,
   space,
@@ -28,15 +37,6 @@ import {
 
 const PAGE = 30;
 
-const SOURCE_ICON: Record<string, string> = {
-  youtube: '▶️',
-  tiktok: '🎵',
-  instagram: '📷',
-  facebook: '👍',
-  x: '𝕏',
-  web: '🔗',
-};
-
 export default function LibraryScreen() {
   const { session } = useSession();
   const { t } = useI18n();
@@ -45,28 +45,58 @@ export default function LibraryScreen() {
   const [scraps, setScraps] = useState<Scrap[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
+  const [counts, setCounts] = useState<{ category: string; scraps: number }[]>([]);
   const { errorText } = useI18n();
+  const loaded = useRef(0);
 
+  const loadCounts = useCallback(async () => {
+    try {
+      setCounts(await myCategoryCounts(supabase));
+    } catch {
+      // Chips are a convenience; the list still works without them.
+    }
+  }, []);
+
+  /** offset 0 reloads everything shown so far (at least one page). */
   const load = useCallback(
     async (offset = 0) => {
       try {
-        const page = await listMyScraps(supabase, userId, { limit: PAGE, offset });
-        setScraps((prev) => (offset === 0 ? page : [...(prev ?? []), ...page]));
-        setHasMore(page.length === PAGE);
+        const limit = offset === 0 ? Math.max(PAGE, loaded.current) : PAGE;
+        const page = await listMyScraps(supabase, userId, { limit, offset, category: category ?? undefined });
+        setScraps((prev) => {
+          const next = offset === 0 ? page : [...(prev ?? []), ...page];
+          loaded.current = next.length;
+          return next;
+        });
+        setHasMore(page.length === limit);
         setLoadError(null);
       } catch (e) {
         setLoadError(errorText(e));
       }
     },
-    [userId, errorText],
+    [userId, errorText, category],
   );
 
   // Reload whenever the library comes back into view (after a delete, etc.).
   useFocusEffect(
     useCallback(() => {
       load(0);
-    }, [load]),
+      loadCounts();
+    }, [load, loadCounts]),
   );
+
+  // New links are organized in the background; refresh until they're done.
+  const processing = !!scraps?.some(isProcessing);
+  usePollWhile(processing, () => {
+    load(0);
+    loadCounts();
+  });
+
+  function pickCategory(next: string | null) {
+    loaded.current = 0;
+    setCategory(next);
+  }
 
   return (
     <>
@@ -80,10 +110,16 @@ export default function LibraryScreen() {
         }}
       />
       <Screen>
-        <AddScrapForm onSaved={() => load(0)} />
+        <AddScrapForm
+          onSaved={() => {
+            load(0);
+            loadCounts();
+          }}
+        />
+        <CategoryChips counts={counts} value={category} onChange={pickCategory} />
         <Message text={loadError} />
         {scraps === null ? null : scraps.length === 0 ? (
-          <Body muted>{t('emptyLibrary')}</Body>
+          <Body muted>{category ? t('emptyCategory') : t('emptyLibrary')}</Body>
         ) : (
           <ScrapGrid scraps={scraps} />
         )}
@@ -149,6 +185,32 @@ function AddScrapForm({ onSaved }: { onSaved: () => void }) {
   );
 }
 
+function CategoryChips({
+  counts,
+  value,
+  onChange,
+}: {
+  counts: { category: string; scraps: number }[];
+  value: string | null;
+  onChange: (category: string | null) => void;
+}) {
+  const { t, locale } = useI18n();
+  if (counts.length === 0) return null;
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
+      <Chip label={t('allCategories')} selected={value === null} onPress={() => onChange(null)} />
+      {counts.map((c) => (
+        <Chip
+          key={c.category}
+          label={`${categoryEmoji(c.category)} ${categoryLabel(c.category, locale) ?? c.category} · ${c.scraps}`}
+          selected={value === c.category}
+          onPress={() => onChange(value === c.category ? null : c.category)}
+        />
+      ))}
+    </ScrollView>
+  );
+}
+
 function ScrapGrid({ scraps }: { scraps: Scrap[] }) {
   const { width } = useWindowDimensions();
   const contentWidth = Math.min(width, MAX_WIDTH) - space.lg * 2;
@@ -167,9 +229,10 @@ function ScrapGrid({ scraps }: { scraps: Scrap[] }) {
 
 function ScrapCard({ scrap }: { scrap: Scrap }) {
   const c = usePalette();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const firstComment = scrap.comments[0]?.body;
   const status = scrap.item.status;
+  const category = categoryLabel(scrap.category, locale);
   return (
     <Link href={{ pathname: '/scrap/[id]', params: { id: scrap.id } }} asChild>
       <Pressable
@@ -182,16 +245,15 @@ function ScrapCard({ scrap }: { scrap: Scrap }) {
           opacity: pressed ? 0.85 : 1,
         })}
       >
-        {scrap.item.og_image ? (
-          <Image source={{ uri: scrap.item.og_image }} style={{ width: '100%', aspectRatio: 16 / 9 }} resizeMode="cover" />
-        ) : (
-          <View style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: c.chip, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 32 }}>{SOURCE_ICON[scrap.item.source] ?? '🔗'}</Text>
-          </View>
-        )}
+        <Thumbnail uri={scrapImageUrl(supabase, scrap)} source={scrap.item.source} />
         <View style={{ padding: space.md, gap: space.sm }}>
+          {category ? (
+            <Text style={{ color: c.accent, fontSize: 12, fontWeight: '600' }}>
+              {categoryEmoji(scrap.category)} {category}
+            </Text>
+          ) : null}
           <Text numberOfLines={2} style={{ color: c.text, fontWeight: '700', fontSize: 16, textAlign: 'auto' }}>
-            {scrapTitle(scrap)}
+            {scrapTitle(scrap, locale)}
           </Text>
           {firstComment ? (
             <Text numberOfLines={3} style={{ color: c.text, fontSize: 14, textAlign: 'auto' }}>
@@ -205,8 +267,11 @@ function ScrapCard({ scrap }: { scrap: Scrap }) {
             <VisibilityBadge visibility={scrap.visibility} />
             {status === 'failed' ? (
               <Text style={{ color: c.danger, fontSize: 12 }}>{t('failed')}</Text>
-            ) : status === 'fetching' || status === 'enriching' ? (
-              <Text style={{ color: c.muted, fontSize: 12 }}>{t('processing')}</Text>
+            ) : isProcessing(scrap) ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
+                <ActivityIndicator size="small" color={c.muted} />
+                <Text style={{ color: c.muted, fontSize: 12 }}>{t('processing')}</Text>
+              </View>
             ) : null}
           </View>
         </View>

@@ -51,6 +51,12 @@ await page.getByRole('button', { name: 'Save' }).click();
 await page.getByText('Already in your library').waitFor();
 step('duplicate link is detected and the comment appended');
 
+// Background organizing (needs the enrich function: `supabase functions serve`).
+// Without an Anthropic key the worker still fills in the page title and image.
+await page.getByText(/Rick Astley/).first().waitFor({ timeout: 45000 });
+await page.locator('img[src*="/storage/v1/object/public/thumbnails/"]').first().waitFor({ state: 'attached', timeout: 45000 });
+step('links are organized in the background: real title and a stored preview image appear');
+
 // Invalid input
 await page.getByPlaceholder('Paste a link…').fill('lemon pasta');
 await page.getByRole('button', { name: 'Save' }).click();

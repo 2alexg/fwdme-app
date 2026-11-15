@@ -1,13 +1,22 @@
 import {
+  CATEGORY_KEYS,
   addComment,
+  categoryEmoji,
+  categoryLabel,
   deleteComment,
   deleteScrap,
   editComment,
   getScrap,
   hostnameOf,
+  isProcessing,
+  retryScrap,
+  scrapImageUrl,
   scrapSummary,
+  scrapTags,
   scrapTitle,
+  setScrapCategory,
   setScrapVisibility,
+  type Category,
   type Scrap,
   type ScrapComment,
   type Visibility,
@@ -15,18 +24,21 @@ import {
 import * as Linking from 'expo-linking';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { confirm } from '@/lib/confirm';
 import { useI18n } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
+import { usePollWhile } from '@/lib/use-poll';
 import {
   Body,
   Button,
   Card,
+  Chip,
   Field,
   Loading,
   Message,
   Screen,
+  Thumbnail,
   Title,
   VisibilityPicker,
   space,
@@ -40,18 +52,33 @@ export default function ScrapScreen() {
   const [scrap, setScrap] = useState<Scrap | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      setScrap(await getScrap(supabase, id));
-    } catch (e) {
-      setError(errorText(e));
-      setScrap(null);
-    }
+  useEffect(() => {
+    let cancelled = false;
+    getScrap(supabase, id).then(
+      (row) => {
+        if (!cancelled) setScrap(row);
+      },
+      (e) => {
+        if (cancelled) return;
+        setError(errorText(e));
+        setScrap(null);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [id, errorText]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Keep the comments the user may be typing: only refresh the item's fields.
+  const refreshItem = useCallback(async () => {
+    try {
+      const fresh = await getScrap(supabase, id);
+      if (fresh) setScrap((prev) => (prev ? { ...prev, item: fresh.item, category: fresh.category } : fresh));
+    } catch {
+      // Try again on the next tick.
+    }
+  }, [id]);
+  usePollWhile(!!scrap && isProcessing(scrap), refreshItem);
 
   if (scrap === undefined) return <Loading />;
   if (scrap === null) {
@@ -64,6 +91,18 @@ export default function ScrapScreen() {
   }
 
   const summary = scrapSummary(scrap, locale);
+  const tags = scrapTags(scrap, locale);
+  const title = scrapTitle(scrap, locale);
+  const processing = isProcessing(scrap);
+
+  async function retry() {
+    setError(null);
+    try {
+      if (await retryScrap(supabase, scrap!.id)) await refreshItem();
+    } catch (e) {
+      setError(errorText(e));
+    }
+  }
 
   async function changeVisibility(next: Visibility) {
     const prev = scrap!.visibility;
@@ -89,29 +128,40 @@ export default function ScrapScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: scrapTitle(scrap) }} />
+      <Stack.Screen options={{ title }} />
       <Screen>
-        <Title>{scrapTitle(scrap)}</Title>
+        <Title>{title}</Title>
         <Message text={error} />
 
         <Comments scrapId={scrap.id} comments={scrap.comments} onChange={(comments) => setScrap({ ...scrap, comments })} />
 
         <Card>
-          {scrap.item.og_image ? (
-            <Image
-              source={{ uri: scrap.item.og_image }}
-              style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: 8 }}
-              resizeMode="cover"
-            />
-          ) : null}
+          <Thumbnail uri={scrapImageUrl(supabase, scrap)} source={scrap.item.source} rounded />
           <Text style={{ color: c.muted, fontSize: 13 }} selectable>
-            {hostnameOf(scrap.original_url)}
+            {[scrap.item.site_name || hostnameOf(scrap.original_url), scrap.item.author_name].filter(Boolean).join(' · ')}
           </Text>
           <Button kind="secondary" title={t('openOriginal')} onPress={() => Linking.openURL(scrap.original_url)} />
-          {summary ? <Body>{summary}</Body> : <Body small muted>{t('summaryPending')}</Body>}
-          {scrap.item.tags.length > 0 ? <Body small muted>{scrap.item.tags.map((tag) => `#${tag}`).join('  ')}</Body> : null}
+          {processing ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+              <ActivityIndicator size="small" color={c.muted} />
+              <Body small muted>{t('summaryProcessing')}</Body>
+            </View>
+          ) : scrap.item.status === 'failed' ? (
+            <View style={{ gap: space.sm }}>
+              <Body small muted>{t('failedHint')}</Body>
+              <Button kind="secondary" title={t('retry')} onPress={retry} />
+            </View>
+          ) : null}
+          {summary ? <Body>{summary}</Body> : null}
+          {tags.length > 0 ? <Body small muted>{tags.map((tag) => `#${tag.label}`).join('  ')}</Body> : null}
           {scrap.shared_text ? <Body small muted>{scrap.shared_text}</Body> : null}
         </Card>
+
+        <CategoryCard
+          scrap={scrap}
+          onChange={(category, override) => setScrap({ ...scrap, category, user_category_override: override })}
+          onError={(e) => setError(errorText(e))}
+        />
 
         <Card>
           <Text style={{ color: c.text, fontWeight: '700' }}>{t('visibility')}</Text>
@@ -121,6 +171,68 @@ export default function ScrapScreen() {
         <Button kind="danger" title={t('deleteScrap')} onPress={remove} />
       </Screen>
     </>
+  );
+}
+
+function CategoryCard({
+  scrap,
+  onChange,
+  onError,
+}: {
+  scrap: Scrap;
+  onChange: (category: string | null, override: string | null) => void;
+  onError: (e: unknown) => void;
+}) {
+  const { t, locale } = useI18n();
+  const c = usePalette();
+  const [editing, setEditing] = useState(false);
+  const label = categoryLabel(scrap.category, locale);
+  // Nothing to show or correct until the AI has picked one.
+  if (!label && !editing) return null;
+
+  async function pick(next: Category | null) {
+    const prev = { category: scrap.category, override: scrap.user_category_override };
+    onChange(next ?? scrap.item.category, next);
+    setEditing(false);
+    try {
+      const saved = await setScrapCategory(supabase, scrap.id, next);
+      onChange(saved, next);
+    } catch (e) {
+      onChange(prev.category, prev.override);
+      onError(e);
+    }
+  }
+
+  return (
+    <Card>
+      <Text style={{ color: c.text, fontWeight: '700' }}>{t('category')}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, flexWrap: 'wrap' }}>
+        <Body>
+          {categoryEmoji(scrap.category)} {label}
+        </Body>
+        <Text style={{ color: c.muted, fontSize: 12 }}>
+          {scrap.user_category_override ? t('categoryByYou') : t('categoryByAi')}
+        </Text>
+        <Text accessibilityRole="button" onPress={() => setEditing(!editing)} style={{ color: c.accent, fontSize: 13 }}>
+          {editing ? t('cancel') : t('changeCategory')}
+        </Text>
+      </View>
+      {editing ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+          {CATEGORY_KEYS.map((key) => (
+            <Chip
+              key={key}
+              label={`${categoryEmoji(key)} ${categoryLabel(key, locale)}`}
+              selected={scrap.category === key}
+              onPress={() => pick(key)}
+            />
+          ))}
+          {scrap.user_category_override && scrap.item.category ? (
+            <Chip label={t('resetCategory')} selected={false} onPress={() => pick(null)} />
+          ) : null}
+        </View>
+      ) : null}
+    </Card>
   );
 }
 
