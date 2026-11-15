@@ -26,6 +26,37 @@ export function ScrapGrid({ scraps }: { scraps: Scrap[] }) {
   );
 }
 
+/** A compact list (small image + title), for "related" suggestions. */
+export function ScrapList({ scraps }: { scraps: Scrap[] }) {
+  const c = usePalette();
+  const { locale } = useI18n();
+  return (
+    <View style={{ gap: space.sm }}>
+      {scraps.map((scrap) => {
+        const category = categoryLabel(scrap.category, locale);
+        return (
+          <Link key={scrap.id} href={{ pathname: '/scrap/[id]', params: { id: scrap.id } }} asChild>
+            <Pressable style={({ pressed }) => ({ flexDirection: 'row', gap: space.md, alignItems: 'center', opacity: pressed ? 0.8 : 1 })}>
+              <View style={{ width: 88, borderRadius: 8, overflow: 'hidden' }}>
+                <Thumbnail uri={scrapImageUrl(supabase, scrap)} source={scrap.item.source} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text numberOfLines={2} style={{ color: c.text, fontWeight: '600', fontSize: 14, textAlign: 'auto' }}>
+                  {scrapTitle(scrap, locale)}
+                </Text>
+                <Text numberOfLines={1} style={{ color: c.muted, fontSize: 12, textAlign: 'auto' }}>
+                  {category ? `${categoryEmoji(scrap.category)} ${category} · ` : ''}
+                  {hostnameOf(scrap.original_url)}
+                </Text>
+              </View>
+            </Pressable>
+          </Link>
+        );
+      })}
+    </View>
+  );
+}
+
 function ScrapCard({ scrap }: { scrap: Scrap }) {
   const c = usePalette();
   const { t, locale } = useI18n();

@@ -428,3 +428,7 @@ enabled = true
 # Woken by the database with a shared secret (x-worker-secret), not a user JWT.
 [functions.enrich]
 verify_jwt = false
+
+# Checks the caller's session itself (works with the new publishable keys).
+[functions.semantic-search]
+verify_jwt = false

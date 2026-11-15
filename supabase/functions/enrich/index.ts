@@ -21,6 +21,13 @@ import {
   validateEnrichment,
   type EnrichmentInput,
 } from '../../../packages/core/src/enrich/prompt.ts';
+import {
+  DEFAULT_EMBED_MODEL,
+  embeddingText,
+  toPgVector,
+  voyageEmbed,
+  type EmbeddableItem,
+} from '../../../packages/core/src/enrich/embed.ts';
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
@@ -32,6 +39,9 @@ const WORKER_SECRET = Deno.env.get('WORKER_SECRET') ?? '';
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const MODEL = Deno.env.get('ENRICH_MODEL') || 'claude-haiku-5-5';
 const META_OEMBED_TOKEN = Deno.env.get('META_OEMBED_TOKEN') || undefined;
+const VOYAGE_API_KEY = Deno.env.get('VOYAGE_API_KEY') || undefined;
+const EMBED_MODEL = Deno.env.get('EMBED_MODEL') || DEFAULT_EMBED_MODEL;
+const EMBED_BATCH = 64;
 const MAX_ATTEMPTS = 4;
 
 const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -159,6 +169,55 @@ async function drain() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Embeddings (Voyage): every ready item without one, including older items.
+// A failure leaves the item without an embedding; the next run tries again.
+// ---------------------------------------------------------------------------
+
+async function embedPending(deadline: number) {
+  if (!VOYAGE_API_KEY) return;
+  let embedded = 0;
+  let tokens = 0;
+  try {
+    while (Date.now() < deadline) {
+      const { data, error } = await db
+        .from('items')
+        .select('id, ai_title, ai_title_he, og_title, og_description, summary_en, summary_he, tags, tag_labels, site_name, raw_text')
+        .eq('status', 'ready')
+        .is('embedding', null)
+        .order('updated_at')
+        .limit(EMBED_BATCH);
+      if (error) throw new Error(`db: ${error.message}`);
+      const items = (data ?? []) as (EmbeddableItem & { id: string })[];
+      if (items.length === 0) break;
+      const out = await voyageEmbed(items.map(embeddingText), 'document', { apiKey: VOYAGE_API_KEY, model: EMBED_MODEL });
+      tokens += out.tokens;
+      const now = new Date().toISOString();
+      await Promise.all(
+        items.map(async (item, i) => {
+          const { error: updateError } = await db
+            .from('items')
+            .update({ embedding: toPgVector(out.vectors[i]!), embedding_model: out.model, embedded_at: now })
+            .eq('id', item.id);
+          if (updateError) throw new Error(`db: ${updateError.message}`);
+        }),
+      );
+      embedded += items.length;
+      if (items.length < EMBED_BATCH) break;
+    }
+  } catch (e) {
+    log('embedding failed', { error: (e as Error).message, embedded });
+    return;
+  }
+  if (embedded > 0) log('embedded', { items: embedded, tokens, model: EMBED_MODEL });
+}
+
+async function run() {
+  const started = Date.now();
+  await drain();
+  await embedPending(started + 130_000);
+}
+
 function secretMatches(given: string | null): boolean {
   if (!WORKER_SECRET || !given || given.length !== WORKER_SECRET.length) return false;
   let diff = 0;
@@ -172,10 +231,10 @@ Deno.serve(async (req) => {
   await req.body?.cancel();
   // `?wait=1` runs in the foreground (tests, manual runs).
   if (new URL(req.url).searchParams.get('wait') === '1') {
-    await drain();
+    await run();
     return Response.json({ ok: true });
   }
-  if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(drain());
-  else await drain();
-  return Response.json({ ok: true, llm: !!anthropic }, { status: 202 });
+  if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(run());
+  else await run();
+  return Response.json({ ok: true, llm: !!anthropic, embeddings: !!VOYAGE_API_KEY }, { status: 202 });
 });
