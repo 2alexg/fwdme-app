@@ -3,7 +3,8 @@
 Save anything from any app in one tap, have it organized automatically, and optionally share it.
 Design doc: [Scrapbook App — Product & Technical Design](https://claude.ai/artifact/1eAUAC2aFVSCbnMZ7DZuPM).
 
-**Status:** milestone 2 of 5 in progress — sharing to the app on Android (iOS moves to milestone 4).
+**Status:** milestone 3 of 5 — links are organized automatically in the background (fetch + AI summary).
+Sharing works on Android; iOS moves to milestone 4.
 
 ## Layout
 
@@ -11,7 +12,8 @@ Design doc: [Scrapbook App — Product & Technical Design](https://claude.ai/art
 | --- | --- |
 | `apps/app` | Expo (React Native + Expo Router) app for iOS, Android and web. The private library lives here. |
 | `packages/core` | Shared TypeScript: URL canonicalization, typed Supabase data access, generated DB types. |
-| `supabase/` | Postgres schema, row-level security, and pgTAP tests (`supabase/tests`). |
+| `packages/core/src/enrich` | The enrichment pipeline (fetch, metadata, prompt, retries), unit-tested and shared with the worker. |
+| `supabase/` | Postgres schema, row-level security, pgTAP tests (`supabase/tests`), and the `enrich` Edge Function (`supabase/functions`). |
 | `e2e/` | Browser smoke test of the web app (Playwright, run in Docker). |
 
 The Next.js app for public `@username` pages arrives with the social milestone.
@@ -24,8 +26,13 @@ Needs Node 22+, pnpm, Docker and the Supabase CLI.
 pnpm install
 pnpm db:start                      # local Supabase on :54321 (first run pulls images)
 cp apps/app/.env.example apps/app/.env
+cp supabase/functions/.env.example supabase/functions/.env   # add ANTHROPIC_API_KEY for AI titles/summaries
+supabase functions serve --env-file supabase/functions/.env  # the enrichment worker (separate terminal)
 pnpm web                           # Expo dev server; press w for the browser (http://localhost:8081)
 ```
+
+Without `ANTHROPIC_API_KEY` the worker still fills in each link's page title, description and image;
+AI titles, categories, tags and summaries need the key.
 
 Sign up with any email: local Supabase skips email confirmation. Emails it would send show up in
 Mailpit at http://127.0.0.1:54324.
@@ -33,14 +40,15 @@ Mailpit at http://127.0.0.1:54324.
 ## Tests
 
 ```sh
-pnpm test:db      # pgTAP: privacy rule, sign-up trigger, save_scrap, account-type changes (40 checks)
-pnpm test         # core unit tests + API integration tests against local Supabase
+pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories (65 checks)
+pnpm test         # core + enrichment pipeline unit tests, API integration tests against local Supabase
 pnpm typecheck
 pnpm build:web && npx serve -s apps/app/dist -l 8081 &   # then:
-pnpm test:e2e     # sign up → save → comment → visibility → delete → account type → Hebrew/RTL → sign in again
+pnpm test:e2e     # sign up → save → organized in background → comment → visibility → delete → account type → Hebrew/RTL → sign in again
 ```
 
-Integration tests skip themselves when local Supabase isn't running.
+Integration tests skip themselves when local Supabase isn't running (and the background test when the
+worker isn't served). The e2e run needs the worker served.
 
 ## How it works (milestone 1)
 
@@ -64,6 +72,28 @@ Integration tests skip themselves when local Supabase isn't running.
 - **Languages:** Hebrew (default) and English, chosen at sign-up and in Settings. On web the
   document switches to `dir="rtl"`. Native RTL comes with the Hebrew/RTL polish milestone.
 
+## How it works (milestone 3): organizing links
+
+- **Queue:** `items.status` is the queue (`pending → fetching → enriching → ready`, or `failed`).
+  Inserting an item pings the `enrich` Edge Function right away (`pg_net`), and `pg_cron` pings it
+  every minute for retries. The function claims items with `worker_claim_items()` (`SKIP LOCKED`, so
+  overlapping runs never take the same item) and answers at once, working in the background.
+- **Fetch:** follows redirects by hand and refuses private/internal addresses at every hop (incl. DNS).
+  Reads Open Graph tags, `<title>`, page text (any charset, e.g. windows-1255) and schema.org Recipe
+  JSON-LD; uses oEmbed for YouTube, TikTok and X (Instagram/Facebook too with `META_OEMBED_TOKEN`).
+- **Images:** the preview image is copied into the public `thumbnails` bucket (`items.image_path`),
+  because source image links (Instagram, TikTok) expire within hours.
+- **AI:** one Claude call with structured output: English + Hebrew title and summary, one of 20 fixed
+  categories (`packages/core/src/categories.ts`), and tags as language-neutral keys with he/en labels.
+  Results are stored on the shared item, so a link saved by many people is organized once. Owner
+  comments are never sent; text the sharing app attached (often the caption) is, with an instruction
+  not to repeat personal remarks. Model: `ENRICH_MODEL` secret, default `claude-haiku-5-5` (cheap and fast; set e.g. `claude-sonnet-5-5` for richer summaries).
+- **Retries:** network trouble, 5xx and rate limits retry after 30s, 2m, 10m (4 attempts), then
+  `failed`; the owner can tap "Try again" (`retry_item()`). A dead worker's lock expires after 3 min.
+- **Categories:** each scrap keeps an effective `category`: the owner's correction
+  (`user_category_override`) or the AI's, kept in sync by triggers. The library filters and counts by it.
+- **App:** cards show "Organizing…" and the library refreshes every 3s while anything is in progress.
+
 ## Phone builds (EAS) and the cloud database
 
 - Expo project: `@fwdme4s-team/fwdme`. Build profiles are in `apps/app/eas.json`; the cloud Supabase
@@ -80,6 +110,28 @@ Integration tests skip themselves when local Supabase isn't running.
   `app.json`). A share opens `fwdme://expo-sharing`, which routes to `src/app/share.tsx`.
 - Email confirmation links redirect to `fwdme://` (allowed under Supabase → Authentication → URL
   Configuration); the app signs the user in from the tokens in that link.
+
+### Deploying the worker to the cloud
+
+One-time setup (CLI logged in with `supabase login`):
+
+```sh
+supabase db push --remote --dry-run && supabase db push --remote
+openssl rand -hex 32                                   # → WORKER_SECRET
+supabase secrets set WORKER_SECRET=<secret> ANTHROPIC_API_KEY=<key>   # optional: ENRICH_MODEL=…
+supabase functions deploy enrich
+```
+
+Then, in the dashboard's SQL editor, tell the database where the worker is:
+
+```sql
+select vault.create_secret('https://rvyystroacoobyhurnrz.supabase.co/functions/v1/enrich', 'worker_url');
+select vault.create_secret('<same WORKER_SECRET>', 'worker_secret');
+```
+
+Later changes to the worker: `supabase functions deploy enrich`. Logs: dashboard → Edge Functions → enrich.
+Links that were organized without a key (`enriched_at is null`) can be re-queued with
+`update items set status = 'pending', attempts = 0, next_attempt_at = now() where enriched_at is null;`.
 
 ## Changing the schema
 

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
+import type { Database, Json } from './database.types';
+import { categoryLabel, type Category } from './categories';
 import { hostnameOf, normalizeLink } from './url';
 
 export type Db = SupabaseClient<Database>;
@@ -18,9 +19,10 @@ export const USERNAME_PATTERN = /^[a-z0-9_]{3,30}$/;
 export const MIN_PASSWORD_LENGTH = 8;
 
 const SCRAP_FIELDS = `
-  id, user_id, original_url, shared_text, visibility, created_at,
-  item:items!inner ( id, canonical_url, source, og_title, og_description, og_image,
-                     ai_title, category, tags, summary_he, summary_en, status ),
+  id, user_id, original_url, shared_text, visibility, created_at, category, user_category_override,
+  item:items!inner ( id, canonical_url, source, og_title, og_description, og_image, image_path,
+                     site_name, author_name, ai_title, ai_title_he, category, tags, tag_labels,
+                     summary_he, summary_en, status, error, enriched_at ),
   comments:scrap_comments ( id, body, created_at, edited_at )
 ` as const;
 
@@ -38,6 +40,9 @@ export interface Scrap {
   shared_text: string | null;
   visibility: Visibility;
   created_at: string;
+  /** Effective category: the owner's correction, else the AI's. */
+  category: string | null;
+  user_category_override: string | null;
   item: {
     id: string;
     canonical_url: string;
@@ -45,12 +50,20 @@ export interface Scrap {
     og_title: string | null;
     og_description: string | null;
     og_image: string | null;
+    /** Our copy of the preview image in the `thumbnails` bucket. */
+    image_path: string | null;
+    site_name: string | null;
+    author_name: string | null;
     ai_title: string | null;
+    ai_title_he: string | null;
     category: string | null;
     tags: string[];
+    tag_labels: Json;
     summary_he: string | null;
     summary_en: string | null;
     status: ItemStatus;
+    error: string | null;
+    enriched_at: string | null;
   };
   comments: ScrapComment[];
 }
@@ -162,7 +175,7 @@ export async function saveScrap(db: Db, input: SaveScrapInput): Promise<SaveScra
 export async function listMyScraps(
   db: Db,
   userId: string,
-  opts: { limit?: number; offset?: number; source?: string } = {},
+  opts: { limit?: number; offset?: number; source?: string; category?: string } = {},
 ): Promise<Scrap[]> {
   const limit = opts.limit ?? 30;
   const offset = opts.offset ?? 0;
@@ -173,6 +186,7 @@ export async function listMyScraps(
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
   if (opts.source) query = query.eq('item.source', opts.source);
+  if (opts.category) query = query.eq('category', opts.category);
   return sortComments(unwrap(await query) as unknown as Scrap[]);
 }
 
@@ -209,6 +223,29 @@ export async function countScrapsNotIn(db: Db, userId: string, visibility: Visib
 /** Opt-in: moves all of the signed-in user's scraps to one mode. Returns how many changed. */
 export async function setAllScrapsVisibility(db: Db, visibility: Visibility): Promise<number> {
   return unwrap(await db.rpc('set_all_scraps_visibility', { p_visibility: visibility }));
+}
+
+/** Corrects the AI's category for this scrap; null goes back to the AI's. */
+export async function setScrapCategory(db: Db, scrapId: string, category: Category | null): Promise<string | null> {
+  const row = unwrap(
+    await db
+      .from('scraps')
+      .update({ user_category_override: category })
+      .eq('id', scrapId)
+      .select('category')
+      .single(),
+  ) as { category: string | null };
+  return row.category;
+}
+
+/** How many of my scraps are in each category, biggest first. */
+export async function myCategoryCounts(db: Db): Promise<{ category: string; scraps: number }[]> {
+  return unwrap(await db.rpc('my_category_counts')) ?? [];
+}
+
+/** Asks for a link that couldn't be read to be tried again. False if it wasn't failed. */
+export async function retryScrap(db: Db, scrapId: string): Promise<boolean> {
+  return unwrap(await db.rpc('retry_item', { p_scrap_id: scrapId }));
 }
 
 export async function deleteScrap(db: Db, scrapId: string) {
@@ -252,10 +289,34 @@ export async function deleteComment(db: Db, commentId: string) {
 // Display helpers
 // ---------------------------------------------------------------------------
 
-/** AI title once enrichment runs; until then the page title or the site. */
-export function scrapTitle(scrap: Pick<Scrap, 'item' | 'original_url'>): string {
-  return scrap.item.ai_title || scrap.item.og_title || hostnameOf(scrap.original_url);
+/** AI title in the reader's language once enrichment runs; until then the page title or the site. */
+export function scrapTitle(scrap: Pick<Scrap, 'item' | 'original_url'>, locale: Locale): string {
+  const { ai_title, ai_title_he, og_title } = scrap.item;
+  const ai = locale === 'he' ? ai_title_he || ai_title : ai_title || ai_title_he;
+  return ai || og_title || hostnameOf(scrap.original_url);
 }
+
+/** Our stored copy of the preview image if we have one, else the source's link. */
+export function scrapImageUrl(db: Db, scrap: Pick<Scrap, 'item'>): string | null {
+  if (scrap.item.image_path) return db.storage.from('thumbnails').getPublicUrl(scrap.item.image_path).data.publicUrl;
+  return scrap.item.og_image;
+}
+
+export function scrapCategoryLabel(scrap: Pick<Scrap, 'category'>, locale: Locale): string | null {
+  return categoryLabel(scrap.category, locale);
+}
+
+/** Tags with labels in the reader's language. */
+export function scrapTags(scrap: Pick<Scrap, 'item'>, locale: Locale): { key: string; label: string }[] {
+  const labels = (scrap.item.tag_labels ?? {}) as Record<string, { en?: string; he?: string } | undefined>;
+  return scrap.item.tags.map((key) => ({ key, label: labels[key]?.[locale] || labels[key]?.en || key.replace(/-/g, ' ') }));
+}
+
+/** Still being fetched or organized by the worker. */
+export function isProcessing(scrap: Pick<Scrap, 'item'>): boolean {
+  return scrap.item.status === 'pending' || scrap.item.status === 'fetching' || scrap.item.status === 'enriching';
+}
+
 
 export function scrapSummary(scrap: Pick<Scrap, 'item'>, locale: Locale): string | null {
   const { summary_he, summary_en, og_description } = scrap.item;

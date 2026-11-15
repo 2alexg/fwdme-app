@@ -63,14 +63,14 @@ isOneToOne: false
                   ]
                 },"items": {
                   Row: {
-                    "ai_title": string | null,"canonical_url": string,"category": string | null,"created_at": string,"enriched_at": string | null,"error": string | null,"extracted_json": Json | null,"id": string,"og_description": string | null,"og_image": string | null,"og_title": string | null,"raw_text": string | null,"source": string,"status": Database["public"]['Enums']["item_status"],"summary_en": string | null,"summary_he": string | null,"tags": (string)[],"updated_at": string
+                    "ai_title": string | null,"ai_title_he": string | null,"attempts": number,"author_name": string | null,"canonical_url": string,"category": string | null,"content_language": string | null,"created_at": string,"enriched_at": string | null,"error": string | null,"extracted_json": Json | null,"id": string,"image_path": string | null,"locked_until": string | null,"next_attempt_at": string,"og_description": string | null,"og_image": string | null,"og_title": string | null,"raw_text": string | null,"resolved_url": string | null,"site_name": string | null,"source": string,"status": Database["public"]['Enums']["item_status"],"summary_en": string | null,"summary_he": string | null,"tag_labels": NonNullable<Json>,"tags": (string)[],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "ai_title"?: string | null,"canonical_url": string,"category"?: string | null,"created_at"?: string,"enriched_at"?: string | null,"error"?: string | null,"extracted_json"?: Json | null,"id"?: string,"og_description"?: string | null,"og_image"?: string | null,"og_title"?: string | null,"raw_text"?: string | null,"source"?: string,"status"?: Database["public"]['Enums']["item_status"],"summary_en"?: string | null,"summary_he"?: string | null,"tags"?: (string)[],"updated_at"?: string
+                    "ai_title"?: string | null,"ai_title_he"?: string | null,"attempts"?: number,"author_name"?: string | null,"canonical_url": string,"category"?: string | null,"content_language"?: string | null,"created_at"?: string,"enriched_at"?: string | null,"error"?: string | null,"extracted_json"?: Json | null,"id"?: string,"image_path"?: string | null,"locked_until"?: string | null,"next_attempt_at"?: string,"og_description"?: string | null,"og_image"?: string | null,"og_title"?: string | null,"raw_text"?: string | null,"resolved_url"?: string | null,"site_name"?: string | null,"source"?: string,"status"?: Database["public"]['Enums']["item_status"],"summary_en"?: string | null,"summary_he"?: string | null,"tag_labels"?: NonNullable<Json>,"tags"?: (string)[],"updated_at"?: string
                   }
                   Update: {
-                    "ai_title"?: string | null,"canonical_url"?: string,"category"?: string | null,"created_at"?: string,"enriched_at"?: string | null,"error"?: string | null,"extracted_json"?: Json | null,"id"?: string,"og_description"?: string | null,"og_image"?: string | null,"og_title"?: string | null,"raw_text"?: string | null,"source"?: string,"status"?: Database["public"]['Enums']["item_status"],"summary_en"?: string | null,"summary_he"?: string | null,"tags"?: (string)[],"updated_at"?: string
+                    "ai_title"?: string | null,"ai_title_he"?: string | null,"attempts"?: number,"author_name"?: string | null,"canonical_url"?: string,"category"?: string | null,"content_language"?: string | null,"created_at"?: string,"enriched_at"?: string | null,"error"?: string | null,"extracted_json"?: Json | null,"id"?: string,"image_path"?: string | null,"locked_until"?: string | null,"next_attempt_at"?: string,"og_description"?: string | null,"og_image"?: string | null,"og_title"?: string | null,"raw_text"?: string | null,"resolved_url"?: string | null,"site_name"?: string | null,"source"?: string,"status"?: Database["public"]['Enums']["item_status"],"summary_en"?: string | null,"summary_he"?: string | null,"tag_labels"?: NonNullable<Json>,"tags"?: (string)[],"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -123,14 +123,14 @@ isOneToOne: false
                   ]
                 },"scraps": {
                   Row: {
-                    "created_at": string,"id": string,"item_id": string,"original_url": string,"shared_text": string | null,"updated_at": string,"user_category_override": string | null,"user_id": string,"visibility": Database["public"]['Enums']["visibility"]
+                    "category": string | null,"created_at": string,"id": string,"item_id": string,"original_url": string,"shared_text": string | null,"updated_at": string,"user_category_override": string | null,"user_id": string,"visibility": Database["public"]['Enums']["visibility"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"item_id": string,"original_url": string,"shared_text"?: string | null,"updated_at"?: string,"user_category_override"?: string | null,"user_id"?: string,"visibility": Database["public"]['Enums']["visibility"]
+                    "category"?: string | null,"created_at"?: string,"id"?: string,"item_id": string,"original_url": string,"shared_text"?: string | null,"updated_at"?: string,"user_category_override"?: string | null,"user_id"?: string,"visibility": Database["public"]['Enums']["visibility"]
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"item_id"?: string,"original_url"?: string,"shared_text"?: string | null,"updated_at"?: string,"user_category_override"?: string | null,"user_id"?: string,"visibility"?: Database["public"]['Enums']["visibility"]
+                    "category"?: string | null,"created_at"?: string,"id"?: string,"item_id"?: string,"original_url"?: string,"shared_text"?: string | null,"updated_at"?: string,"user_category_override"?: string | null,"user_id"?: string,"visibility"?: Database["public"]['Enums']["visibility"]
                   }
                   Relationships: [
                     {
@@ -173,7 +173,15 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "save_scrap":
+            "my_category_counts":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "category": string,"scraps": number
+            }[]
+                           },
+"retry_item":
+{ Args: { "p_scrap_id": string }; Returns: boolean
+                           },
+"save_scrap":
 { Args: { "p_canonical_url": string,"p_comment"?: string,"p_original_url": string,"p_shared_text"?: string,"p_source"?: string,"p_visibility"?: Database["public"]['Enums']["visibility"] }; Returns: Json
                            },
 "set_all_scraps_visibility":
@@ -181,7 +189,44 @@ isOneToOne: false
                            },
 "username_available":
 { Args: { "p_username": string }; Returns: boolean
-                           }
+                           },
+"worker_claim_items":
+{ Args: { "p_limit"?: number,"p_max_attempts"?: number }; Returns: {
+              "ai_title": string | null,
+"ai_title_he": string | null,
+"attempts": number,
+"author_name": string | null,
+"canonical_url": string,
+"category": string | null,
+"content_language": string | null,
+"created_at": string,
+"enriched_at": string | null,
+"error": string | null,
+"extracted_json": Json | null,
+"id": string,
+"image_path": string | null,
+"locked_until": string | null,
+"next_attempt_at": string,
+"og_description": string | null,
+"og_image": string | null,
+"og_title": string | null,
+"raw_text": string | null,
+"resolved_url": string | null,
+"site_name": string | null,
+"source": string,
+"status": Database["public"]['Enums']["item_status"],
+"summary_en": string | null,
+"summary_he": string | null,
+"tag_labels": NonNullable<Json>,
+"tags": (string)[],
+"updated_at": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "items"
+        isOneToOne: false
+        isSetofReturn: true
+      } }
           }
           Enums: {
             "account_type": "public"|"private","item_status": "pending"|"fetching"|"enriching"|"ready"|"failed","visibility": "private"|"followers"|"public"

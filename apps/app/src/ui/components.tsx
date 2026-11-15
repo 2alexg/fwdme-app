@@ -1,7 +1,8 @@
 import type { Visibility } from '@fwdme/core';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -178,6 +179,46 @@ export function Segmented<T extends string>({
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+export function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  const c = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      aria-selected={selected}
+      onPress={onPress}
+      style={[styles.chip, { backgroundColor: selected ? c.accent : c.chip, borderColor: selected ? c.accent : c.border }]}
+    >
+      <Text style={{ color: selected ? c.accentText : c.text, fontSize: 13, fontWeight: '600' }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+export const SOURCE_ICON: Record<string, string> = {
+  youtube: '▶️',
+  tiktok: '🎵',
+  instagram: '📷',
+  facebook: '👍',
+  x: '𝕏',
+  web: '🔗',
+};
+
+/** Preview image, or the source's icon when there is none or it fails to load. */
+export function Thumbnail({ uri, source, rounded }: { uri: string | null; source: string; rounded?: boolean }) {
+  const c = usePalette();
+  // Remember which URL failed, so a new URL gets a fresh try.
+  const [brokenUri, setBrokenUri] = useState<string | null>(null);
+  const broken = brokenUri !== null && brokenUri === uri;
+  const style = { width: '100%' as const, aspectRatio: 16 / 9, borderRadius: rounded ? 8 : 0 };
+  if (uri && !broken) {
+    return <Image source={{ uri }} style={style} resizeMode="cover" onError={() => setBrokenUri(uri)} accessibilityIgnoresInvertColors />;
+  }
+  return (
+    <View style={[style, { backgroundColor: c.chip, alignItems: 'center', justifyContent: 'center' }]}>
+      <Text style={{ fontSize: 32 }}>{SOURCE_ICON[source] ?? '🔗'}</Text>
     </View>
   );
 }

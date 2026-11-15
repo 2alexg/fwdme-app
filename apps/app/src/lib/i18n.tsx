@@ -41,7 +41,15 @@ const en = {
   deleteScrap: 'Delete scrap',
   confirmDeleteScrap: 'Delete this scrap and its comments?',
   notFound: "This scrap doesn't exist or isn't visible to you.",
-  summaryPending: 'An AI summary and tags will appear here once organizing is switched on.',
+  summaryProcessing: 'Reading the link and organizing it — this takes a few seconds.',
+  failedHint: "We couldn't read this link. The site may be down or block previews.",
+  emptyCategory: 'Nothing in this category yet.',
+  allCategories: 'All',
+  category: 'Category',
+  categoryByAi: 'picked automatically',
+  categoryByYou: 'set by you',
+  changeCategory: 'Change',
+  resetCategory: '↺ Automatic',
   back: 'Back',
   // visibility
   visibility: 'Who can see this',
@@ -129,7 +137,15 @@ const he: Record<StringKey, string> = {
   deleteScrap: 'מחיקת הפריט',
   confirmDeleteScrap: 'למחוק את הפריט ואת ההערות שלו?',
   notFound: 'הפריט לא קיים או שאין לך הרשאה לראות אותו.',
-  summaryPending: 'סיכום ותגיות של AI יופיעו כאן כשהסידור האוטומטי יופעל.',
+  summaryProcessing: 'קוראים את הקישור ומסדרים אותו — זה לוקח כמה שניות.',
+  failedHint: 'לא הצלחנו לקרוא את הקישור. ייתכן שהאתר לא זמין או חוסם תצוגה מקדימה.',
+  emptyCategory: 'אין עדיין פריטים בקטגוריה הזו.',
+  allCategories: 'הכול',
+  category: 'קטגוריה',
+  categoryByAi: 'נבחרה אוטומטית',
+  categoryByYou: 'נקבעה על ידך',
+  changeCategory: 'שינוי',
+  resetCategory: '↺ אוטומטי',
   back: 'חזרה',
   visibility: 'מי יכול לראות',
   vis_default: 'ברירת המחדל של החשבון',
@@ -198,9 +214,12 @@ const I18nContext = createContext<I18nState | null>(null);
 export function I18nProvider({ locale: preferred, children }: { locale?: Locale; children: ReactNode }) {
   const [locale, setLocale] = useState<Locale>(preferred ?? deviceLocale());
 
-  useEffect(() => {
+  // The profile's language wins whenever it loads or changes.
+  const [lastPreferred, setLastPreferred] = useState(preferred);
+  if (preferred !== lastPreferred) {
+    setLastPreferred(preferred);
     if (preferred) setLocale(preferred);
-  }, [preferred]);
+  }
 
   const isRTL = locale === 'he';
 
