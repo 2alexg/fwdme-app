@@ -15,29 +15,31 @@ import {
 } from 'react-native';
 import { useI18n, type StringKey } from '@/lib/i18n';
 
+// Fwd:Me greens. Every text/background pair meets WCAG AA (4.5:1) in both
+// themes; the theme follows the phone's light/dark setting.
 const light = {
-  bg: '#faf8f5',
+  bg: '#f3f7f4',
   surface: '#ffffff',
-  text: '#1d1b19',
-  muted: '#6b6560',
-  border: '#e4dfd8',
-  accent: '#c2410c',
+  text: '#13201a',
+  muted: '#5a6b61',
+  border: '#d6e3da',
+  accent: '#047857',
   accentText: '#ffffff',
   danger: '#b91c1c',
   success: '#15803d',
-  chip: '#f1ece6',
+  chip: '#e6f0e9',
 };
 const dark: typeof light = {
-  bg: '#171513',
-  surface: '#221f1c',
-  text: '#f3efe9',
-  muted: '#a49d95',
-  border: '#3a3530',
-  accent: '#fb923c',
-  accentText: '#1d1b19',
+  bg: '#0d1411',
+  surface: '#15201a',
+  text: '#e6f0ea',
+  muted: '#98aa9f',
+  border: '#28392f',
+  accent: '#34d399',
+  accentText: '#052e1f',
   danger: '#f87171',
   success: '#4ade80',
-  chip: '#2e2a26',
+  chip: '#1d2b23',
 };
 export type Palette = typeof light;
 
