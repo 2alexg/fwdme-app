@@ -71,24 +71,27 @@ export default function ShareScreen() {
 
   // Nothing pending (e.g. opened /share directly): go to the library.
   useEffect(() => {
-    if (payloads.length === 0 && savedKey.current === null) router.replace('/');
+    if (payloads.length === 0 && savedKey.current === null) router.dismissTo('/');
   }, [payloads]);
 
   const finish = useCallback(
-    async (next: 'source-app' | 'open-scrap') => {
+    async (next: 'source-app' | 'library' | 'open-scrap') => {
       setFinishing(true);
       const scrapId = state.kind === 'saved' ? state.scrapId : null;
       if (scrapId && comment.trim()) {
         await addComment(supabase, scrapId, comment).catch(() => {});
       }
       clear();
+      // The library is always underneath (the root layout's anchor), so the
+      // share screen is swapped for the scrap or popped back to the library;
+      // either way Back leads to the library.
       if (next === 'open-scrap' && scrapId) {
         router.replace({ pathname: '/scrap/[id]', params: { id: scrapId } });
         return;
       }
-      router.replace('/');
+      router.dismissTo('/');
       // Android: leave the app so the user is back where they shared from.
-      if (Platform.OS === 'android') BackHandler.exitApp();
+      if (next === 'source-app' && Platform.OS === 'android') BackHandler.exitApp();
     },
     [state, comment, clear],
   );
@@ -140,6 +143,7 @@ export default function ShareScreen() {
             {!touched ? <Body small muted>{t('shareAutoClose')}</Body> : null}
             <Button title={t('done')} onPress={() => finish('source-app')} busy={finishing} />
             <Button kind="link" title={t('openInApp')} onPress={() => finish('open-scrap')} disabled={finishing} />
+            <Button kind="link" title={t('goToLibrary')} onPress={() => finish('library')} disabled={finishing} />
           </View>
         ) : null}
 
@@ -155,6 +159,7 @@ export default function ShareScreen() {
             <Message text={state.message} />
             <Button title={t('retry')} onPress={save} />
             <Button kind="secondary" title={t('close')} onPress={() => finish('source-app')} />
+            <Button kind="link" title={t('goToLibrary')} onPress={() => finish('library')} />
           </>
         ) : null}
       </Card>

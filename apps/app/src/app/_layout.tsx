@@ -8,6 +8,10 @@ import { PendingShareProvider, usePendingShare } from '@/lib/pending-share';
 import { SessionProvider, useSession } from '@/lib/session';
 import { Loading, usePalette } from '@/ui/components';
 
+// Keep the library underneath screens opened from outside the app (a share,
+// "Open in Fwd:Me"), so there's always a way back to it.
+export const unstable_settings = { anchor: 'index' };
+
 export default function RootLayout() {
   return (
     <SessionProvider>

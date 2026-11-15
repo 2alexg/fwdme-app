@@ -85,6 +85,7 @@ const en = {
   shareSignIn: 'Sign in to save what you shared.',
   done: 'Done',
   openInApp: 'Open in Fwd:Me',
+  goToLibrary: 'Go to my library',
   retry: 'Try again',
   close: 'Close',
   // errors
@@ -178,6 +179,7 @@ const he: Record<StringKey, string> = {
   shareSignIn: 'התחברו כדי לשמור את מה ששיתפתם.',
   done: 'סיום',
   openInApp: 'פתיחה ב-Fwd:Me',
+  goToLibrary: 'מעבר לספרייה שלי',
   retry: 'נסו שוב',
   close: 'סגירה',
   err_generic: 'משהו השתבש. נסו שוב.',
