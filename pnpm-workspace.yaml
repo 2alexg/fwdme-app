@@ -1,0 +1,7 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'e2e'
+
+# Expo + React Native libraries are most reliable with a flat node_modules.
+nodeLinker: hoisted

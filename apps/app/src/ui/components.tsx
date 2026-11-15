@@ -1,0 +1,234 @@
+import type { Visibility } from '@fwdme/core';
+import type { ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useColorScheme,
+  type TextInputProps,
+  type ViewStyle,
+} from 'react-native';
+import { useI18n, type StringKey } from '@/lib/i18n';
+
+const light = {
+  bg: '#faf8f5',
+  surface: '#ffffff',
+  text: '#1d1b19',
+  muted: '#6b6560',
+  border: '#e4dfd8',
+  accent: '#c2410c',
+  accentText: '#ffffff',
+  danger: '#b91c1c',
+  success: '#15803d',
+  chip: '#f1ece6',
+};
+const dark: typeof light = {
+  bg: '#171513',
+  surface: '#221f1c',
+  text: '#f3efe9',
+  muted: '#a49d95',
+  border: '#3a3530',
+  accent: '#fb923c',
+  accentText: '#1d1b19',
+  danger: '#f87171',
+  success: '#4ade80',
+  chip: '#2e2a26',
+};
+export type Palette = typeof light;
+
+export function usePalette(): Palette {
+  return useColorScheme() === 'dark' ? dark : light;
+}
+
+export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
+export const MAX_WIDTH = 1080;
+
+export function Screen({ children, narrow }: { children: ReactNode; narrow?: boolean }) {
+  const c = usePalette();
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: c.bg }}
+      contentContainerStyle={{ padding: space.lg, alignItems: 'center' }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={{ width: '100%', maxWidth: narrow ? 420 : MAX_WIDTH, gap: space.lg }}>{children}</View>
+    </ScrollView>
+  );
+}
+
+export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+  const c = usePalette();
+  return (
+    <View
+      style={[
+        { backgroundColor: c.surface, borderColor: c.border, borderWidth: 1, borderRadius: 12, padding: space.lg, gap: space.md },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
+
+export function Title({ children }: { children: ReactNode }) {
+  const c = usePalette();
+  return <Text style={{ color: c.text, fontSize: 24, fontWeight: '700', textAlign: 'auto' }}>{children}</Text>;
+}
+
+export function Body({ children, muted, small }: { children: ReactNode; muted?: boolean; small?: boolean }) {
+  const c = usePalette();
+  return (
+    <Text style={{ color: muted ? c.muted : c.text, fontSize: small ? 13 : 15, lineHeight: small ? 18 : 22, textAlign: 'auto' }}>
+      {children}
+    </Text>
+  );
+}
+
+export function Field({ label, hint, ...props }: TextInputProps & { label?: string; hint?: string }) {
+  const c = usePalette();
+  const { isRTL } = useI18n();
+  return (
+    <View style={{ gap: space.xs }}>
+      {label ? <Text style={{ color: c.text, fontWeight: '600', fontSize: 14 }}>{label}</Text> : null}
+      <TextInput
+        placeholderTextColor={c.muted}
+        {...props}
+        style={[
+          styles.input,
+          { color: c.text, borderColor: c.border, backgroundColor: c.surface, textAlign: isRTL ? 'right' : 'left' },
+          props.multiline && { minHeight: 72, textAlignVertical: 'top' },
+          props.style,
+        ]}
+      />
+      {hint ? <Body small muted>{hint}</Body> : null}
+    </View>
+  );
+}
+
+export function Button({
+  title,
+  onPress,
+  kind = 'primary',
+  busy,
+  disabled,
+}: {
+  title: string;
+  onPress: () => void;
+  kind?: 'primary' | 'secondary' | 'danger' | 'link';
+  busy?: boolean;
+  disabled?: boolean;
+}) {
+  const c = usePalette();
+  const bg = kind === 'primary' ? c.accent : 'transparent';
+  const fg = kind === 'primary' ? c.accentText : kind === 'danger' ? c.danger : kind === 'link' ? c.accent : c.text;
+  const off = disabled || busy;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      disabled={off}
+      style={({ pressed }) => [
+        kind === 'link' ? styles.link : styles.button,
+        { backgroundColor: bg, opacity: off ? 0.5 : pressed ? 0.8 : 1 },
+        kind !== 'primary' && kind !== 'link' && { borderColor: kind === 'danger' ? c.danger : c.border, borderWidth: 1 },
+      ]}
+    >
+      {busy ? <ActivityIndicator color={fg} /> : <Text style={{ color: fg, fontWeight: '600', fontSize: 15 }}>{title}</Text>}
+    </Pressable>
+  );
+}
+
+export function Message({ text, tone = 'error' }: { text: string | null; tone?: 'error' | 'success' }) {
+  const c = usePalette();
+  if (!text) return null;
+  return (
+    <Text accessibilityRole="alert" style={{ color: tone === 'error' ? c.danger : c.success, fontSize: 14 }}>
+      {text}
+    </Text>
+  );
+}
+
+export function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+}) {
+  const c = usePalette();
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            accessibilityRole="radio"
+            aria-checked={on}
+            onPress={() => onChange(o.value)}
+            style={[styles.chip, { backgroundColor: on ? c.accent : c.chip, borderColor: on ? c.accent : c.border }]}
+          >
+            <Text style={{ color: on ? c.accentText : c.text, fontSize: 13, fontWeight: '600' }}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+export type VisibilityChoice = Visibility | 'default';
+
+const VISIBILITY_LABELS: [Visibility, StringKey][] = [
+  ['private', 'vis_private'],
+  ['followers', 'vis_followers'],
+  ['public', 'vis_public'],
+];
+
+/** For a new scrap: includes "Account default", resolved when it is saved. */
+export function NewScrapVisibilityPicker({ value, onChange }: { value: VisibilityChoice; onChange: (v: VisibilityChoice) => void }) {
+  const { t } = useI18n();
+  const keys: [VisibilityChoice, StringKey][] = [['default', 'vis_default'], ...VISIBILITY_LABELS];
+  return <Segmented value={value} onChange={onChange} options={keys.map(([v, k]) => ({ value: v, label: t(k) }))} />;
+}
+
+/** For a saved scrap, which always has its own setting. */
+export function VisibilityPicker({ value, onChange }: { value: Visibility; onChange: (v: Visibility) => void }) {
+  const { t } = useI18n();
+  return <Segmented value={value} onChange={onChange} options={VISIBILITY_LABELS.map(([v, k]) => ({ value: v, label: t(k) }))} />;
+}
+
+export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
+  const c = usePalette();
+  const { t } = useI18n();
+  const icon = visibility === 'public' ? '🌐' : visibility === 'followers' ? '👥' : '🔒';
+  return (
+    <View style={[styles.badge, { backgroundColor: c.chip }]}>
+      <Text style={{ color: c.muted, fontSize: 12 }}>
+        {icon} {t(`vis_${visibility}`)}
+      </Text>
+    </View>
+  );
+}
+
+export function Loading() {
+  const c = usePalette();
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg, padding: space.xxl }}>
+      <ActivityIndicator color={c.accent} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  input: { borderWidth: 1, borderRadius: 8, paddingHorizontal: space.md, paddingVertical: 10, fontSize: 15 },
+  button: { borderRadius: 8, paddingHorizontal: space.lg, paddingVertical: 11, alignItems: 'center', justifyContent: 'center', minHeight: 44 },
+  link: { paddingVertical: space.sm, alignItems: 'center' },
+  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: space.md, paddingVertical: 6 },
+  badge: { borderRadius: 999, paddingHorizontal: space.sm, paddingVertical: 2, alignSelf: 'flex-start' },
+});
