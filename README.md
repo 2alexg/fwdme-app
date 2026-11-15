@@ -3,7 +3,7 @@
 Save anything from any app in one tap, have it organized automatically, and optionally share it.
 Design doc: [Scrapbook App — Product & Technical Design](https://claude.ai/artifact/1eAUAC2aFVSCbnMZ7DZuPM).
 
-**Status:** milestone 4 of 5 in progress — boards are in; search and iOS sharing are next.
+**Status:** milestone 4 of 5 in progress — boards and keyword search are in; iOS sharing and search by meaning are next.
 Sharing works on Android; iOS comes later in milestone 4.
 
 ## Layout
@@ -40,11 +40,11 @@ Mailpit at http://127.0.0.1:54324.
 ## Tests
 
 ```sh
-pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards (82 checks)
+pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards, search (96 checks)
 pnpm test         # core + enrichment pipeline unit tests, API integration tests against local Supabase
 pnpm typecheck
 pnpm build:web && npx serve -s apps/app/dist -l 8081 &   # then:
-pnpm test:e2e     # sign up → save → organized in background → comment → visibility → boards → delete → account type → Hebrew/RTL → sign in again
+pnpm test:e2e     # sign up → save → organized in background → comment → search → visibility → boards → delete → account type → Hebrew/RTL → sign in again
 ```
 
 Integration tests skip themselves when local Supabase isn't running (and the background test when the
@@ -104,6 +104,21 @@ worker isn't served). The e2e run needs the worker served.
 - `my_boards()` returns the boards screen in one call (order, scrap counts, up to four cover
   images); `reorder_boards()` saves the order. In the app: **Boards** in the library header, a page
   per board (rename, delete), and a Boards card on each scrap (tap a board to add or remove, or make a new one).
+
+## How it works (milestone 4): keyword search
+
+- `search_my_scraps(query, category?)` searches only the caller's scraps. Every word must appear
+  somewhere; where it appears sets the rank: title (8) > tags and the owner's comments (4) >
+  summary, site and URL (2) > page text and the text the sharing app attached (1).
+- **Hebrew:** Postgres full-text search has no Hebrew dictionary, so words match as substrings after
+  lowercasing and removing niqqud. A query word that starts with prefix letters (ו ה ב ל מ ש כ) also
+  matches without one (4+ letters) or two (5+ letters): "והחומוס" finds "חומוס".
+- The normalized text of each item is stored in generated columns (`items.search_*`), updated by
+  Postgres whenever the worker writes. A search is a scan of your own library: about 250–350 ms for
+  3,000 links with the full 6,000 characters of page text each, much less for real libraries. Add a
+  trigram index if libraries grow far beyond that.
+- In the app: a search field in the library (searches as you type, after a short pause), combined
+  with the category chips.
 
 ## Phone builds (EAS) and the cloud database
 

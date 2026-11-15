@@ -5,11 +5,12 @@ import {
   listMyScraps,
   myCategoryCounts,
   saveScrap,
+  searchMyScraps,
   type Scrap,
 } from '@fwdme/core';
 import { Link, Stack, useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
@@ -41,8 +42,21 @@ export default function LibraryScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
   const [counts, setCounts] = useState<{ category: string; scraps: number }[]>([]);
+  const [typed, setTyped] = useState('');
+  const [query, setQuery] = useState('');
   const { errorText } = useI18n();
   const loaded = useRef(0);
+  // Only the newest request may update the list (typing fires many).
+  const latest = useRef(0);
+
+  // Search once typing pauses.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loaded.current = 0;
+      setQuery(typed.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [typed]);
 
   const loadCounts = useCallback(async () => {
     try {
@@ -55,9 +69,18 @@ export default function LibraryScreen() {
   /** offset 0 reloads everything shown so far (at least one page). */
   const load = useCallback(
     async (offset = 0) => {
+      const request = ++latest.current;
       try {
-        const limit = offset === 0 ? Math.max(PAGE, loaded.current) : PAGE;
-        const page = await listMyScraps(supabase, userId, { limit, offset, category: category ?? undefined });
+        let limit = offset === 0 ? Math.max(PAGE, loaded.current) : PAGE;
+        const filter = { limit, offset, category: category ?? undefined };
+        let page: Scrap[];
+        if (query) {
+          limit = filter.limit = Math.min(limit, 100); // the server's cap per search
+          page = await searchMyScraps(supabase, query, filter);
+        } else {
+          page = await listMyScraps(supabase, userId, filter);
+        }
+        if (request !== latest.current) return;
         setScraps((prev) => {
           const next = offset === 0 ? page : [...(prev ?? []), ...page];
           loaded.current = next.length;
@@ -69,7 +92,7 @@ export default function LibraryScreen() {
         setLoadError(errorText(e));
       }
     },
-    [userId, errorText, category],
+    [userId, errorText, category, query],
   );
 
   // Reload whenever the library comes back into view (after a delete, etc.).
@@ -115,10 +138,11 @@ export default function LibraryScreen() {
             loadCounts();
           }}
         />
+        <SearchField value={typed} onChange={setTyped} />
         <CategoryChips counts={counts} value={category} onChange={pickCategory} />
         <Message text={loadError} />
         {scraps === null ? null : scraps.length === 0 ? (
-          <Body muted>{category ? t('emptyCategory') : t('emptyLibrary')}</Body>
+          <Body muted>{query ? t('noSearchResults') : category ? t('emptyCategory') : t('emptyLibrary')}</Body>
         ) : (
           <ScrapGrid scraps={scraps} />
         )}
@@ -181,6 +205,35 @@ function AddScrapForm({ onSaved }: { onSaved: () => void }) {
       <Message text={message?.text ?? null} tone={message?.tone} />
       <Button title={t('save')} onPress={submit} busy={busy} disabled={!link.trim()} />
     </Card>
+  );
+}
+
+function SearchField({ value, onChange }: { value: string; onChange: (text: string) => void }) {
+  const { t } = useI18n();
+  const c = usePalette();
+  return (
+    <View style={{ justifyContent: 'center' }}>
+      <Field
+        value={value}
+        onChangeText={onChange}
+        placeholder={t('searchPlaceholder')}
+        accessibilityLabel={t('search')}
+        autoCorrect={false}
+        returnKeyType="search"
+        inputMode="search"
+        style={{ paddingEnd: 44 }}
+      />
+      {value ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('clearSearch')}
+          onPress={() => onChange('')}
+          style={{ position: 'absolute', end: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Text style={{ color: c.muted, fontSize: 16 }}>✕</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
