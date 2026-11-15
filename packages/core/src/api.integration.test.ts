@@ -13,6 +13,8 @@ import {
   removeScrapFromBoard,
   renameBoard,
   reorderBoards,
+  relatedScraps,
+  searchByMeaning,
   searchMyScraps,
   countScrapsNotIn,
   deleteComment,
@@ -224,6 +226,21 @@ describe.skipIf(!reachable)('api against local supabase', () => {
     expect(await searchMyScraps(alice, `shakshuka ${run} nothing-like-this`)).toEqual([]);
     expect(await searchMyScraps(alice, '   ')).toEqual([]);
     expect(await searchMyScraps(alice, `shakshuka ${run}`, { category: 'travel' })).toEqual([]);
+  });
+
+  it('has nothing related for a scrap without an embedding, and nothing for other people', async () => {
+    const { scrapId } = await saveScrap(alice, { input: `https://example.com/related-${run}` });
+    expect(await relatedScraps(alice, scrapId)).toEqual([]);
+    expect(await relatedScraps(bob, scrapId)).toEqual([]);
+  });
+
+  it.skipIf(!workerUp)('search by meaning answers signed-in users only', async () => {
+    // Without VOYAGE_API_KEY on the server this is switched off and finds nothing;
+    // with a key it may be rate-limited, which is reported as unavailable.
+    const outcome = await searchByMeaning(alice, 'something to cook tonight').catch((e: ApiError) => e);
+    if (outcome instanceof ApiError) expect(outcome.code).toBe('semantic_search_unavailable');
+    else expect(Array.isArray(outcome)).toBe(true);
+    await expect(searchByMeaning(anon, 'something to cook tonight')).rejects.toBeInstanceOf(ApiError);
   });
 
   it('refuses saves without a session or a link', async () => {

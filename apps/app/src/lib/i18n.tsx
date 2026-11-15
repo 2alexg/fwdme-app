@@ -30,6 +30,8 @@ const en = {
   searchPlaceholder: 'Search your library…',
   clearSearch: 'Clear search',
   noSearchResults: 'Nothing matches your search.',
+  similarIdeas: 'Similar ideas',
+  related: 'Related in your library',
   processing: 'Organizing…',
   failed: "Couldn't read this link",
   // scrap
@@ -153,6 +155,8 @@ const he: Record<StringKey, string> = {
   searchPlaceholder: 'חיפוש בספרייה…',
   clearSearch: 'ניקוי החיפוש',
   noSearchResults: 'לא נמצא שום דבר שמתאים לחיפוש.',
+  similarIdeas: 'רעיונות דומים',
+  related: 'קשור לזה בספרייה שלך',
   processing: 'מסדר…',
   failed: 'לא הצלחנו לקרוא את הקישור',
   openOriginal: 'פתיחת המקור',

@@ -5,6 +5,7 @@ import {
   listMyScraps,
   myCategoryCounts,
   saveScrap,
+  searchByMeaning,
   searchMyScraps,
   type Scrap,
 } from '@fwdme/core';
@@ -48,6 +49,31 @@ export default function LibraryScreen() {
   const loaded = useRef(0);
   // Only the newest request may update the list (typing fires many).
   const latest = useRef(0);
+
+  // Search by meaning alongside the keyword search (needs a few letters).
+  // Tagged with the search they answer, so older results never show for a newer search.
+  const [similarFor, setSimilarFor] = useState<{ key: string; scraps: Scrap[] }>({ key: '', scraps: [] });
+  const searchKey = `${query}\n${category ?? ''}`;
+  const similar = similarFor.key === searchKey ? similarFor.scraps : [];
+  useEffect(() => {
+    let cancelled = false;
+    if (query.length < 3) return;
+    // Each search by meaning is a paid API call: wait until typing has really stopped.
+    const timer = setTimeout(() => {
+      searchByMeaning(supabase, query, { category: category ?? undefined, limit: 8 }).then(
+        (found) => {
+          if (!cancelled) setSimilarFor({ key: `${query}\n${category ?? ''}`, scraps: found });
+        },
+        () => {
+          // Optional extra: keyword results still show.
+        },
+      );
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, category]);
 
   // Search once typing pauses.
   useEffect(() => {
@@ -110,6 +136,9 @@ export default function LibraryScreen() {
     loadCounts();
   });
 
+  const shown = new Set(scraps?.map((s) => s.id));
+  const similarOnly = similar.filter((s) => !shown.has(s.id));
+
   function pickCategory(next: string | null) {
     loaded.current = 0;
     setCategory(next);
@@ -142,11 +171,19 @@ export default function LibraryScreen() {
         <CategoryChips counts={counts} value={category} onChange={pickCategory} />
         <Message text={loadError} />
         {scraps === null ? null : scraps.length === 0 ? (
-          <Body muted>{query ? t('noSearchResults') : category ? t('emptyCategory') : t('emptyLibrary')}</Body>
+          query && similarOnly.length > 0 ? null : (
+            <Body muted>{query ? t('noSearchResults') : category ? t('emptyCategory') : t('emptyLibrary')}</Body>
+          )
         ) : (
           <ScrapGrid scraps={scraps} />
         )}
         {hasMore ? <Button kind="secondary" title={t('loadMore')} onPress={() => load(scraps?.length ?? 0)} /> : null}
+        {query && similarOnly.length > 0 ? (
+          <>
+            <Text style={{ color: c.text, fontWeight: '700', fontSize: 16 }}>{t('similarIdeas')}</Text>
+            <ScrapGrid scraps={similarOnly} />
+          </>
+        ) : null}
       </Screen>
     </>
   );

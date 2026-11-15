@@ -4,6 +4,7 @@ import {
   addScrapToBoard,
   createBoard,
   listMyBoards,
+  relatedScraps,
   removeScrapFromBoard,
   categoryEmoji,
   categoryLabel,
@@ -49,6 +50,7 @@ import {
   space,
   usePalette,
 } from '@/ui/components';
+import { ScrapList } from '@/ui/scrap-grid';
 
 export default function ScrapScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -179,9 +181,40 @@ export default function ScrapScreen() {
           <VisibilityPicker value={scrap.visibility} onChange={changeVisibility} />
         </Card>
 
+        <Related scrapId={scrap.id} ready={scrap.item.status === 'ready'} />
+
         <Button kind="danger" title={t('deleteScrap')} onPress={remove} />
       </Screen>
     </>
+  );
+}
+
+/** My other scraps closest in meaning; hidden when there are none (or no embeddings yet). */
+function Related({ scrapId, ready }: { scrapId: string; ready: boolean }) {
+  const { t } = useI18n();
+  const c = usePalette();
+  const [related, setRelated] = useState<Scrap[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    if (!ready) return;
+    relatedScraps(supabase, scrapId).then(
+      (found) => {
+        if (!cancelled) setRelated(found);
+      },
+      () => {
+        // A suggestion box; nothing to tell the user if it fails.
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [scrapId, ready]);
+  if (related.length === 0) return null;
+  return (
+    <Card>
+      <Text style={{ color: c.text, fontWeight: '700' }}>{t('related')}</Text>
+      <ScrapList scraps={related} />
+    </Card>
   );
 }
 

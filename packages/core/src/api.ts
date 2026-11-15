@@ -230,12 +230,46 @@ export async function searchMyScraps(
       p_offset: opts.offset ?? 0,
     }),
   ) as { scrap_id: string; rank: number }[];
-  if (hits.length === 0) return [];
-  const rows = unwrap(
-    await db.from('scraps').select(SCRAP_FIELDS).in('id', hits.map((h) => h.scrap_id)),
-  ) as unknown as Scrap[];
+  return scrapsInOrder(db, hits.map((h) => h.scrap_id));
+}
+
+/** Loads full scraps for ids from a search, keeping the search's order. */
+async function scrapsInOrder(db: Db, ids: string[]): Promise<Scrap[]> {
+  if (ids.length === 0) return [];
+  const rows = unwrap(await db.from('scraps').select(SCRAP_FIELDS).in('id', ids)) as unknown as Scrap[];
   const byId = new Map(rows.map((r) => [r.id, r]));
-  return sortComments(hits.map((h) => byId.get(h.scrap_id)).filter((r): r is Scrap => !!r));
+  return sortComments(ids.map((id) => byId.get(id)).filter((r): r is Scrap => !!r));
+}
+
+/**
+ * Searches my library by meaning ("ideas for a rainy day" finds a museum
+ * guide). The words go to the semantic-search Edge Function, which embeds them;
+ * closest first. Empty when search by meaning isn't set up on the server.
+ */
+export async function searchByMeaning(
+  db: Db,
+  query: string,
+  opts: { limit?: number; category?: string } = {},
+): Promise<Scrap[]> {
+  if (!query.trim()) return [];
+  const { data, error } = await db.functions.invoke('semantic-search', {
+    body: { query, category: opts.category, limit: opts.limit ?? 20 },
+  });
+  if (error) {
+    // 503: the embedding service is busy or down (e.g. rate-limited); try again later.
+    const status = (error as { context?: { status?: number } }).context?.status;
+    throw new ApiError(error.message, status === 503 ? 'semantic_search_unavailable' : 'semantic_search_failed');
+  }
+  const results = ((data as { results?: { scrap_id: string }[] } | null)?.results ?? []);
+  return scrapsInOrder(db, results.map((r) => r.scrap_id));
+}
+
+/** My other scraps closest in meaning to this one ("related in your library"). */
+export async function relatedScraps(db: Db, scrapId: string, opts: { limit?: number } = {}): Promise<Scrap[]> {
+  const hits = unwrap(
+    await db.rpc('related_scraps', { p_scrap_id: scrapId, p_limit: opts.limit ?? 6 }),
+  ) as { scrap_id: string }[];
+  return scrapsInOrder(db, hits.map((h) => h.scrap_id));
 }
 
 export async function getScrap(db: Db, scrapId: string): Promise<Scrap | null> {
