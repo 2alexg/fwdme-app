@@ -41,7 +41,7 @@ export default function SignUpScreen() {
   }
 
   return (
-    <Screen narrow>
+    <Screen noHeader narrow>
       <Brand />
       <Title>{t('signUp')}</Title>
       <Segmented

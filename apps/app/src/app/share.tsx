@@ -118,7 +118,7 @@ export default function ShareScreen() {
   }
 
   return (
-    <Screen narrow>
+    <Screen noHeader narrow>
       <Card>
         {state.kind === 'saving' ? <Body>{t('shareSaving')}</Body> : null}
 
