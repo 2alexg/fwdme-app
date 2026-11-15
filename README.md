@@ -3,8 +3,8 @@
 Save anything from any app in one tap, have it organized automatically, and optionally share it.
 Design doc: [Scrapbook App — Product & Technical Design](https://claude.ai/artifact/1eAUAC2aFVSCbnMZ7DZuPM).
 
-**Status:** milestone 3 of 5 — links are organized automatically in the background (fetch + AI summary).
-Sharing works on Android; iOS moves to milestone 4.
+**Status:** milestone 4 of 5 in progress — boards are in; search and iOS sharing are next.
+Sharing works on Android; iOS comes later in milestone 4.
 
 ## Layout
 
@@ -40,11 +40,11 @@ Mailpit at http://127.0.0.1:54324.
 ## Tests
 
 ```sh
-pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories (65 checks)
+pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards (82 checks)
 pnpm test         # core + enrichment pipeline unit tests, API integration tests against local Supabase
 pnpm typecheck
 pnpm build:web && npx serve -s apps/app/dist -l 8081 &   # then:
-pnpm test:e2e     # sign up → save → organized in background → comment → visibility → delete → account type → Hebrew/RTL → sign in again
+pnpm test:e2e     # sign up → save → organized in background → comment → visibility → boards → delete → account type → Hebrew/RTL → sign in again
 ```
 
 Integration tests skip themselves when local Supabase isn't running (and the background test when the
@@ -93,6 +93,17 @@ worker isn't served). The e2e run needs the worker served.
 - **Categories:** each scrap keeps an effective `category`: the owner's correction
   (`user_category_override`) or the AI's, kept in sync by triggers. The library filters and counts by it.
 - **App:** cards show "Organizing…" and the library refreshes every 3s while anything is in progress.
+
+## How it works (milestone 4): boards
+
+- **Boards** (`boards`, `board_scraps`) are named collections of your own scraps; a scrap can be on
+  any number of boards. Names are unique per person, ignoring case. Deleting a board keeps its
+  scraps; deleting a scrap takes it off its boards.
+- **Private to the owner for now:** row-level security lets only the owner see or change a board,
+  and only their own scraps can go on it. Public boards and following a board come with the social milestone.
+- `my_boards()` returns the boards screen in one call (order, scrap counts, up to four cover
+  images); `reorder_boards()` saves the order. In the app: **Boards** in the library header, a page
+  per board (rename, delete), and a Boards card on each scrap (tap a board to add or remove, or make a new one).
 
 ## Phone builds (EAS) and the cloud database
 

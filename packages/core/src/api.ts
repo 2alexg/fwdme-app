@@ -23,7 +23,8 @@ const SCRAP_FIELDS = `
   item:items!inner ( id, canonical_url, source, og_title, og_description, og_image, image_path,
                      site_name, author_name, ai_title, ai_title_he, category, tags, tag_labels,
                      summary_he, summary_en, status, error, enriched_at ),
-  comments:scrap_comments ( id, body, created_at, edited_at )
+  comments:scrap_comments ( id, body, created_at, edited_at ),
+  boards:board_scraps ( board_id )
 ` as const;
 
 export interface ScrapComment {
@@ -66,7 +67,22 @@ export interface Scrap {
     enriched_at: string | null;
   };
   comments: ScrapComment[];
+  /** The owner's boards this scrap is on (always empty for other people's scraps). */
+  boards: { board_id: string }[];
 }
+
+export interface Board {
+  id: string;
+  name: string;
+  position: number;
+  created_at: string;
+  /** How many scraps are on it. */
+  scraps: number;
+  /** Preview images of the most recently added scraps (up to four). */
+  covers: { image_path: string | null; og_image: string | null; source: string }[];
+}
+
+export const MAX_BOARD_NAME_LENGTH = 80;
 
 export class ApiError extends Error {
   constructor(message: string, readonly code?: string) {
@@ -175,19 +191,24 @@ export async function saveScrap(db: Db, input: SaveScrapInput): Promise<SaveScra
 export async function listMyScraps(
   db: Db,
   userId: string,
-  opts: { limit?: number; offset?: number; source?: string; category?: string } = {},
+  opts: { limit?: number; offset?: number; source?: string; category?: string; boardId?: string } = {},
 ): Promise<Scrap[]> {
   const limit = opts.limit ?? 30;
   const offset = opts.offset ?? 0;
+  // A board filter needs an inner join under its own alias, so `boards` still lists every board.
+  const fields = opts.boardId ? `${SCRAP_FIELDS}, on_board:board_scraps!inner ( board_id )` : SCRAP_FIELDS;
   let query = db
     .from('scraps')
-    .select(SCRAP_FIELDS)
+    .select(fields)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
   if (opts.source) query = query.eq('item.source', opts.source);
   if (opts.category) query = query.eq('category', opts.category);
-  return sortComments(unwrap(await query) as unknown as Scrap[]);
+  if (opts.boardId) query = query.eq('on_board.board_id', opts.boardId);
+  const rows = unwrap(await query) as unknown as (Scrap & { on_board?: unknown })[];
+  for (const row of rows) delete row.on_board;
+  return sortComments(rows);
 }
 
 export async function getScrap(db: Db, scrapId: string): Promise<Scrap | null> {
@@ -283,6 +304,79 @@ export async function editComment(db: Db, commentId: string, body: string): Prom
 
 export async function deleteComment(db: Db, commentId: string) {
   unwrap(await db.from('scrap_comments').delete().eq('id', commentId).select('id').single());
+}
+
+// ---------------------------------------------------------------------------
+// Boards
+// ---------------------------------------------------------------------------
+
+/** My boards in my order, with counts and cover images. */
+export async function listMyBoards(db: Db): Promise<Board[]> {
+  return (unwrap(await db.rpc('my_boards')) ?? []) as unknown as Board[];
+}
+
+export async function getBoard(db: Db, boardId: string): Promise<Pick<Board, 'id' | 'name'> | null> {
+  return unwrap(await db.from('boards').select('id, name').eq('id', boardId).maybeSingle());
+}
+
+function boardName(name: string): string {
+  const text = name.trim();
+  if (!text) throw new ApiError('empty_board_name');
+  if (text.length > MAX_BOARD_NAME_LENGTH) throw new ApiError('board_name_too_long');
+  return text;
+}
+
+/** Postgres unique violation on (owner, name) → a friendly error. */
+function boardNameTaken(e: unknown): never {
+  if (e instanceof ApiError && e.code === '23505') throw new ApiError('board_name_taken', '23505');
+  throw e;
+}
+
+export async function createBoard(db: Db, name: string): Promise<Pick<Board, 'id' | 'name'>> {
+  const text = boardName(name);
+  try {
+    return unwrap(await db.from('boards').insert({ name: text }).select('id, name').single());
+  } catch (e) {
+    return boardNameTaken(e);
+  }
+}
+
+export async function renameBoard(db: Db, boardId: string, name: string): Promise<Pick<Board, 'id' | 'name'>> {
+  const text = boardName(name);
+  try {
+    return unwrap(await db.from('boards').update({ name: text }).eq('id', boardId).select('id, name').single());
+  } catch (e) {
+    return boardNameTaken(e);
+  }
+}
+
+/** Deletes the board only; its scraps stay in the library. */
+export async function deleteBoard(db: Db, boardId: string) {
+  unwrap(await db.from('boards').delete().eq('id', boardId).select('id').single());
+}
+
+/** Saves my boards' order, top to bottom. */
+export async function reorderBoards(db: Db, boardIds: string[]) {
+  unwrap(await db.rpc('reorder_boards', { p_ids: boardIds }));
+}
+
+export async function addScrapToBoard(db: Db, scrapId: string, boardId: string) {
+  const { error } = await db.from('board_scraps').insert({ board_id: boardId, scrap_id: scrapId });
+  // Already on it is fine.
+  if (error && error.code !== '23505') throw new ApiError(error.message, error.code);
+}
+
+export async function removeScrapFromBoard(db: Db, scrapId: string, boardId: string) {
+  const { error } = await db.from('board_scraps').delete().eq('board_id', boardId).eq('scrap_id', scrapId);
+  if (error) throw new ApiError(error.message, error.code);
+}
+
+/** Cover image URLs for a board card: our stored copy if we have one, else the source's link. */
+export function boardCoverUrls(db: Db, board: Pick<Board, 'covers'>): { uri: string | null; source: string }[] {
+  return board.covers.map((c) => ({
+    uri: c.image_path ? db.storage.from('thumbnails').getPublicUrl(c.image_path).data.publicUrl : c.og_image,
+    source: c.source,
+  }));
 }
 
 // ---------------------------------------------------------------------------

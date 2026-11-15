@@ -1,6 +1,10 @@
 import {
   CATEGORY_KEYS,
   addComment,
+  addScrapToBoard,
+  createBoard,
+  listMyBoards,
+  removeScrapFromBoard,
   categoryEmoji,
   categoryLabel,
   deleteComment,
@@ -16,6 +20,7 @@ import {
   scrapTitle,
   setScrapCategory,
   setScrapVisibility,
+  type Board,
   type Category,
   type Scrap,
   type ScrapComment,
@@ -163,6 +168,12 @@ export default function ScrapScreen() {
           onError={(e) => setError(errorText(e))}
         />
 
+        <BoardsCard
+          scrapId={scrap.id}
+          onBoards={scrap.boards.map((b) => b.board_id)}
+          onChange={(ids) => setScrap((prev) => (prev ? { ...prev, boards: ids.map((board_id) => ({ board_id })) } : prev))}
+        />
+
         <Card>
           <Text style={{ color: c.text, fontWeight: '700' }}>{t('visibility')}</Text>
           <VisibilityPicker value={scrap.visibility} onChange={changeVisibility} />
@@ -171,6 +182,89 @@ export default function ScrapScreen() {
         <Button kind="danger" title={t('deleteScrap')} onPress={remove} />
       </Screen>
     </>
+  );
+}
+
+/** Which of my boards this scrap is on; tap to add or remove, or make a new board for it. */
+function BoardsCard({
+  scrapId,
+  onBoards,
+  onChange,
+}: {
+  scrapId: string;
+  onBoards: string[];
+  onChange: (boardIds: string[]) => void;
+}) {
+  const { t, errorText } = useI18n();
+  const c = usePalette();
+  const [boards, setBoards] = useState<Pick<Board, 'id' | 'name'>[] | null>(null);
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listMyBoards(supabase).then(setBoards, (e) => setError(errorText(e)));
+  }, [errorText]);
+
+  async function toggle(boardId: string) {
+    const on = onBoards.includes(boardId);
+    const before = onBoards;
+    onChange(on ? onBoards.filter((id) => id !== boardId) : [...onBoards, boardId]);
+    setError(null);
+    try {
+      if (on) await removeScrapFromBoard(supabase, scrapId, boardId);
+      else await addScrapToBoard(supabase, scrapId, boardId);
+    } catch (e) {
+      onChange(before);
+      setError(errorText(e));
+    }
+  }
+
+  async function create() {
+    setBusy(true);
+    setError(null);
+    try {
+      const board = await createBoard(supabase, draft);
+      setBoards((prev) => [...(prev ?? []), board]);
+      setDraft('');
+      await addScrapToBoard(supabase, scrapId, board.id);
+      onChange([...onBoards, board.id]);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <Text style={{ color: c.text, fontWeight: '700' }}>{t('addToBoard')}</Text>
+      {boards && boards.length > 0 ? (
+        <>
+          <Body small muted>{t('addToBoardHint')}</Body>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+            {boards.map((b) => {
+              const on = onBoards.includes(b.id);
+              return <Chip key={b.id} label={`${on ? '✓ ' : ''}${b.name}`} selected={on} onPress={() => toggle(b.id)} />;
+            })}
+          </View>
+        </>
+      ) : null}
+      <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'flex-start' }}>
+        <View style={{ flex: 1 }}>
+          <Field
+            value={draft}
+            onChangeText={setDraft}
+            placeholder={t('newBoard')}
+            maxLength={80}
+            onSubmitEditing={() => draft.trim() && create()}
+            accessibilityLabel={t('newBoard')}
+          />
+        </View>
+        <Button kind="secondary" title={t('create')} onPress={create} busy={busy} disabled={!draft.trim()} />
+      </View>
+      <Message text={error} />
+    </Card>
   );
 }
 
