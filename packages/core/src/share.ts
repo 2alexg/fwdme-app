@@ -1,4 +1,4 @@
-import { extractUrl } from './url';
+import { extractUrl } from './url.ts';
 
 /** What the OS hands over when someone shares to the app (subset of expo-sharing's SharePayload). */
 export interface IncomingShare {

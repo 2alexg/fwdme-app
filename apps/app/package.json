@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@bacons/apple-targets": "5.0.0",
     "@fwdme/core": "workspace:*",
     "@supabase/supabase-js": "^2.119.0",
     "expo": "~58.0.25",

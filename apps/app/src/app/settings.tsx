@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
+import { forgetShareToken } from '@/lib/share-token';
 import { supabase } from '@/lib/supabase';
 import { Body, Button, Card, Loading, Message, Screen, Segmented, space, usePalette } from '@/ui/components';
 
@@ -119,7 +120,7 @@ export default function SettingsScreen() {
 
       <Message text={error} />
       <Message text={notice} tone="success" />
-      <Button kind="secondary" title={t('signOut')} onPress={() => signOut(supabase).catch((e) => setError(errorText(e)))} />
+      <Button kind="secondary" title={t('signOut')} onPress={() => forgetShareToken().then(() => signOut(supabase)).catch((e) => setError(errorText(e)))} />
     </Screen>
   );
 }

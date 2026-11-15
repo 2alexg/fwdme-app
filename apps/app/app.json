@@ -8,7 +8,15 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.fwdme.mobile"
+      "bundleIdentifier": "app.fwdme.mobile",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.app.fwdme.mobile"
+        ]
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -57,7 +65,8 @@
             "backgroundColor": "#14532D"
           }
         }
-      ]
+      ],
+      "@bacons/apple-targets"
     ],
     "scheme": "fwdme",
     "experiments": {

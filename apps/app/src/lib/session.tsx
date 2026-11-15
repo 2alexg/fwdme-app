@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { getMyProfile, type Profile } from '@fwdme/core';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { syncShareToken } from './share-token';
 import { supabase } from './supabase';
 
 interface SessionState {
@@ -42,6 +43,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       sub.subscription.unsubscribe();
     };
   }, [refreshProfile]);
+
+  // iOS share sheet: keep its share token in step with who is signed in.
+  const userId = session?.user.id ?? null;
+  const locale = profile?.locale ?? 'he';
+  useEffect(() => {
+    if (!loading) syncShareToken(userId, locale);
+  }, [loading, userId, locale]);
 
   return (
     <SessionContext.Provider value={{ session, profile, loading, refreshProfile, setProfile }}>

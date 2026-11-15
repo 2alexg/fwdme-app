@@ -140,6 +140,19 @@ export async function signOut(db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Share tokens (the iOS share sheet saves with one; see the share_tokens migration)
+// ---------------------------------------------------------------------------
+
+/** A new token for this device; shown once, only its hash is stored. */
+export async function createShareToken(db: Db, label?: string): Promise<string> {
+  return unwrap(await db.rpc('create_share_token', { p_label: label ?? undefined }));
+}
+
+export async function revokeShareToken(db: Db, token: string) {
+  unwrap(await db.rpc('revoke_share_token', { p_token: token }));
+}
+
+// ---------------------------------------------------------------------------
 // Profile
 // ---------------------------------------------------------------------------
 
