@@ -125,7 +125,8 @@ worker isn't served). The e2e run needs the worker served.
 - **Embeddings:** Voyage (`voyage-4`, 1024 dimensions; `EMBED_MODEL` to override) embeds each ready
   item's titles in both languages, summaries, tags and the first 2000 characters of page text, into
   `items.embedding` (pgvector). The enrich worker does it after each run, in batches of 64, for every
-  ready item that has none, including older items. When the title, summary or tags change, a trigger
+  ready item that has none, including older items. pg_cron also wakes the worker for those (at most one
+  try per item every 15 minutes, `items.embed_attempted_at`), so failed embeddings are retried. When the title, summary or tags change, a trigger
   drops the embedding so it is made again. Without `VOYAGE_API_KEY` this is off.
 - **Search:** the `semantic-search` Edge Function checks the caller's session, embeds the query (the
   key never reaches the app) and calls `match_my_scraps()` as the caller. Matches below 0.3 cosine
