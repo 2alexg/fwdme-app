@@ -148,6 +148,15 @@ const deps: PipelineDeps = {
     if (error) throw new TransientError(`db: ${error.message}`);
     return (data ?? []).map((r: { shared_text: string }) => r.shared_text);
   },
+  async resolveItem(itemId, canonicalUrl, source) {
+    const { data, error } = await db.rpc('worker_resolve_item', {
+      p_item: itemId,
+      p_canonical_url: canonicalUrl,
+      p_source: source,
+    });
+    if (error) throw new TransientError(`resolve: ${error.message}`);
+    return { mergedInto: ((data ?? {}) as { merged_into: string | null }).merged_into ?? null };
+  },
   async update(itemId, patch) {
     const { error } = await db.from('items').update(patch).eq('id', itemId);
     if (error) throw new TransientError(`db: ${error.message}`);

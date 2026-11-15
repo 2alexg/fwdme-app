@@ -40,7 +40,7 @@ Mailpit at http://127.0.0.1:54324.
 ## Tests
 
 ```sh
-pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards, search, search by meaning (109 checks)
+pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards, search, search by meaning, merging redirected links (125 checks)
 pnpm test         # core + enrichment pipeline unit tests, API integration tests against local Supabase
 pnpm typecheck
 pnpm build:web && npx serve -s apps/app/dist -l 8081 &   # then:
@@ -141,6 +141,20 @@ worker isn't served). The e2e run needs the worker served.
 - No vector index: matches are always within one person's library, and an exact scan is fast.
 - **Voyage rate limits:** without a payment method on the Voyage account, the limit is 3 requests and
   10K tokens per minute, so searches fail often (the app then shows keyword results only).
+
+## How it works (milestone 4): one item per page
+
+- Only the worker can follow redirects, so a short link (bit.ly, a Facebook `share/p` link, AliExpress
+  app links) first gets its own item. When the worker finds that it lands on a page with a different
+  canonical URL, `worker_resolve_item()` merges it into the item for that page if one exists: every
+  scrap moves over, and someone who saved both keeps the scrap they made first, with the comments,
+  boards and shared text from both. If no item exists for the page yet, the item is renamed to it.
+- Either way the old URL is kept in `item_aliases`, so `save_scrap()` sends the next save of it
+  straight to the right item.
+- Never treated as a destination: error pages (status 400+), login walls and consent screens, and a
+  site's home page, so unrelated links don't merge into "Instagram login".
+- Canonical URLs also drop Facebook's `share_url` pointer, and AliExpress product pages keep only the
+  product ID (`aliexpress.com/item/<id>.html`).
 
 ## Phone builds (EAS) and the cloud database
 

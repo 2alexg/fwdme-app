@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CATEGORY_KEYS } from '../categories.ts';
-import { backoffSeconds, drainQueue, processItem, TransientError, type ClaimedItem, type PipelineDeps } from './pipeline.ts';
+import { backoffSeconds, drainQueue, processItem, redirectTarget, TransientError, type ClaimedItem, type PipelineDeps } from './pipeline.ts';
 import { buildEnrichmentPrompt, ENRICHMENT_SCHEMA, isThin, validateEnrichment, type Enrichment } from './prompt.ts';
 
 const HTML = `<html lang="en"><head><title>Lemon pasta</title>
@@ -82,6 +82,40 @@ describe('processItem', () => {
     });
     await processItem(deps, { ...item, canonical_url: 'https://vm.tiktok.test/abc', source: 'tiktok' });
     expect(updates[0]).toMatchObject({ resolved_url: 'https://www.tiktok.com/@chef/video/1', og_title: 'Caption from TikTok' });
+  });
+
+  it('merges a short link into the item for the page it leads to', async () => {
+    const resolveItem = vi.fn(async () => ({ mergedInto: 'item-existing' }));
+    const { deps, updates } = makeDeps({
+      'https://bit.test/x': () => response(null, { status: 301, headers: { location: 'https://www.kitchen.test/pasta?utm_source=sms' } }),
+      'https://www.kitchen.test/pasta': () => response(HTML, { headers: { 'content-type': 'text/html' } }),
+    }, { resolveItem });
+    expect(await processItem(deps, { ...item, canonical_url: 'https://bit.test/x' })).toBe('merged');
+    expect(resolveItem).toHaveBeenCalledWith('item-1', 'https://kitchen.test/pasta', 'web');
+    expect(updates).toEqual([]); // the item is gone; nothing else to write
+    expect(deps.enrich).not.toHaveBeenCalled();
+  });
+
+  it('keeps organizing a renamed item when no one had saved the page yet', async () => {
+    const resolveItem = vi.fn(async () => ({ mergedInto: null }));
+    const { deps, updates } = makeDeps({
+      'https://bit.test/x': () => response(null, { status: 301, headers: { location: 'https://kitchen.test/pasta' } }),
+      'https://kitchen.test/pasta': () => response(HTML, { headers: { 'content-type': 'text/html' } }),
+      'https://cdn.test/p.jpg': jpeg,
+    }, { resolveItem });
+    expect(await processItem(deps, { ...item, canonical_url: 'https://bit.test/x' })).toBe('ready');
+    expect(resolveItem).toHaveBeenCalledOnce();
+    expect(updates.at(-1)).toMatchObject({ status: 'ready' });
+  });
+
+  it('does not merge when the link lands on an error page', async () => {
+    const resolveItem = vi.fn(async () => ({ mergedInto: 'nope' }));
+    const { deps } = makeDeps({
+      'https://bit.test/gone': () => response(null, { status: 301, headers: { location: 'https://kitchen.test/404' } }),
+      'https://kitchen.test/404': () => response('not found', { status: 404 }),
+    }, { resolveItem });
+    await processItem(deps, { ...item, canonical_url: 'https://bit.test/gone' });
+    expect(resolveItem).not.toHaveBeenCalled();
   });
 
   it('refuses redirects into the private network', async () => {
@@ -241,5 +275,30 @@ describe('queue', () => {
     const claim = vi.fn(async () => [item]);
     await drainQueue(claim, async () => { t += 60_000; return 'retry'; }, { budgetMs: 100_000, now: () => t });
     expect(claim).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('redirectTarget', () => {
+  const from = { canonical_url: 'https://facebook.com/share/p/1JDfNKvDgp' };
+  const landed = (url: string, ok = true) => ({ metadata: {}, resolvedUrl: url, resolvedOk: ok });
+
+  it('gives the canonical form of a real destination', () => {
+    expect(redirectTarget(from, landed('https://www.facebook.com/groups/5300/permalink/2593/?rdid=x&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare'))).toEqual({
+      canonicalUrl: 'https://facebook.com/groups/5300/permalink/2593', source: 'facebook',
+    });
+  });
+
+  it('ignores login walls, consent screens and home pages', () => {
+    for (const url of [
+      'https://www.facebook.com/login/?next=https%3A%2F%2Fwww.facebook.com%2Fshare%2Fp%2F1',
+      'https://www.instagram.com/accounts/login/?next=/p/abc/',
+      'https://consent.youtube.com/m?continue=https://youtube.com',
+      'https://www.facebook.com/',
+    ]) expect(redirectTarget(from, landed(url))).toBeNull();
+  });
+
+  it('ignores redirects that only change the spelling (www, tracking) and failed loads', () => {
+    expect(redirectTarget({ canonical_url: 'https://walla.co.il/news/1' }, landed('https://www.walla.co.il/news/1?utm_source=x'))).toBeNull();
+    expect(redirectTarget(from, landed('https://www.facebook.com/groups/5300/permalink/2593/', false))).toBeNull();
   });
 });

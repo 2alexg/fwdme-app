@@ -2,7 +2,7 @@
 // Everything with side effects comes in through `deps`, so the same code runs
 // in the Deno Edge Function and in unit tests with fakes.
 
-import type { Source } from '../url.ts';
+import { normalizeLink, type Source } from '../url.ts';
 import {
   decodeHtml,
   isFetchableUrl,
@@ -43,6 +43,12 @@ export interface PipelineDeps {
   storeImage: (itemId: string, bytes: Uint8Array, contentType: string) => Promise<string>;
   sharedTexts: (itemId: string) => Promise<string[]>;
   update: (itemId: string, patch: Record<string, unknown>) => Promise<void>;
+  /**
+   * The link redirected to a page with a different canonical URL: merge this
+   * item into the one for that page if it exists (returns its id), else
+   * rename this item to it (returns null). Optional (tests, older setups).
+   */
+  resolveItem?: (itemId: string, canonicalUrl: string, source: Source) => Promise<{ mergedInto: string | null }>;
   metaToken?: string;
   maxAttempts?: number;
   now?: () => Date;
@@ -141,6 +147,8 @@ export async function safeGet(
 export interface Gathered {
   metadata: PageMetadata;
   resolvedUrl: string;
+  /** The page itself loaded (status < 400), so resolvedUrl is a real destination. */
+  resolvedOk?: boolean;
   /** Set when nothing could be read for a reason worth retrying. */
   transientError?: string;
 }
@@ -150,6 +158,7 @@ export async function gather(deps: PipelineDeps, item: ClaimedItem): Promise<Gat
   let page: PageMetadata = {};
   let oembed: PageMetadata = {};
   let resolvedUrl = item.canonical_url;
+  let resolvedOk = false;
   const errors: { transient: boolean; message: string }[] = [];
 
   const pageTask = (async () => {
@@ -157,6 +166,7 @@ export async function gather(deps: PipelineDeps, item: ClaimedItem): Promise<Gat
       const res = await safeGet(deps, item.canonical_url, 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5', MAX_HTML_BYTES);
       resolvedUrl = res.url;
       if (res.status >= 400) throw new Error(`HTTP ${res.status}`);
+      resolvedOk = true;
       if (res.contentType && !/html|xml/i.test(res.contentType)) return;
       page = parseHtml(decodeHtml(res.bytes, res.contentType), res.url);
     } catch (e) {
@@ -186,6 +196,7 @@ export async function gather(deps: PipelineDeps, item: ClaimedItem): Promise<Gat
   return {
     metadata,
     resolvedUrl,
+    resolvedOk,
     transientError: empty && transient ? errors.map((e) => e.message).join('; ') : undefined,
   };
 }
@@ -207,7 +218,31 @@ async function copyImage(deps: PipelineDeps, itemId: string, imageUrl: string): 
 // The whole thing for one item
 // ---------------------------------------------------------------------------
 
-export type ItemResult = 'ready' | 'metadata-only' | 'retry' | 'failed';
+export type ItemResult = 'ready' | 'metadata-only' | 'retry' | 'failed' | 'merged';
+
+/** Pages a short link may land on that are not the content: login walls, consent screens. */
+const WALL_PATH = /(^|\/)(log-?in|sign-?in|signup|accounts\/login|checkpoint|consent|captcha|challenge|auth|sso|oauth)(\/|\.|$)/i;
+
+/**
+ * The canonical URL a link redirected to, when it is a real destination with
+ * a different identity than the item has now; otherwise null.
+ */
+export function redirectTarget(item: Pick<ClaimedItem, 'canonical_url'>, gathered: Gathered): { canonicalUrl: string; source: Source } | null {
+  if (!gathered.resolvedOk || gathered.resolvedUrl === item.canonical_url) return null;
+  let target;
+  try {
+    target = normalizeLink(gathered.resolvedUrl);
+  } catch {
+    return null;
+  }
+  if (target.canonicalUrl === item.canonical_url) return null;
+  // Check where it really landed and the normalized form (which rewrites hosts).
+  for (const url of [new URL(gathered.resolvedUrl), new URL(target.canonicalUrl)]) {
+    if (WALL_PATH.test(url.pathname) || /^(consent|accounts|login|auth)\./.test(url.hostname)) return null;
+    if (url.pathname === '/' && !url.search) return null; // a site's home page is never what was shared
+  }
+  return { canonicalUrl: target.canonicalUrl, source: target.source };
+}
 
 export async function processItem(deps: PipelineDeps, item: ClaimedItem): Promise<ItemResult> {
   const maxAttempts = deps.maxAttempts ?? 4;
@@ -228,6 +263,16 @@ export async function processItem(deps: PipelineDeps, item: ClaimedItem): Promis
   try {
     const gathered = await gather(deps, item);
     if (gathered.transientError) return await retryOrFail(gathered.transientError, true);
+
+    // A short link (or a share link) for a page someone already saved: one item.
+    const target = deps.resolveItem ? redirectTarget(item, gathered) : null;
+    if (target) {
+      const { mergedInto } = await deps.resolveItem!(item.id, target.canonicalUrl, target.source);
+      if (mergedInto) {
+        deps.log?.('merged', { itemId: item.id, into: mergedInto });
+        return 'merged';
+      }
+    }
     const m = gathered.metadata;
 
     const imagePath = m.image ? await copyImage(deps, item.id, m.image) : null;
@@ -298,7 +343,7 @@ export async function drainQueue(
   run: (item: ClaimedItem) => Promise<ItemResult>,
   opts: { batchSize?: number; budgetMs?: number; now?: () => number } = {},
 ): Promise<Record<ItemResult, number>> {
-  const counts: Record<ItemResult, number> = { ready: 0, 'metadata-only': 0, retry: 0, failed: 0 };
+  const counts: Record<ItemResult, number> = { ready: 0, 'metadata-only': 0, retry: 0, failed: 0, merged: 0 };
   const clock = opts.now ?? Date.now;
   const deadline = clock() + (opts.budgetMs ?? 90_000);
   while (clock() < deadline) {
