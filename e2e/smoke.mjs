@@ -77,6 +77,22 @@ await page.getByText('Nothing matches your search.').waitFor();
 await page.getByRole('button', { name: 'Clear search' }).click();
 await page.waitForFunction(() => document.querySelectorAll('a[href^="/scrap/"]').length === 2);
 step('search finds scraps by title and by my comments; clearing shows everything again');
+
+// View switcher: grid (default), wide cards, compact list; remembered after a reload
+for (const view of ['Cards', 'List', 'Grid']) {
+  await page.getByRole('radio', { name: view }).click();
+  const checked = await page.getByRole('radio', { name: view }).getAttribute('aria-checked');
+  if (checked !== 'true') throw new Error(`${view} view not selected`);
+  await page.getByText('Lemon pasta for Friday').first().waitFor();
+}
+await page.screenshot({ path: `${out}/library-grid.png`, fullPage: true });
+await page.getByRole('radio', { name: 'List' }).click();
+await page.reload();
+await page.getByPlaceholder('Search your library…').waitFor();
+if ((await page.getByRole('radio', { name: 'List' }).getAttribute('aria-checked')) !== 'true') throw new Error('view choice not remembered');
+await page.screenshot({ path: `${out}/library-list.png`, fullPage: true });
+await page.getByRole('radio', { name: 'Grid' }).click();
+step('view switcher: grid, cards and list; the choice is remembered');
 await page.screenshot({ path: `${out}/library.png`, fullPage: true });
 
 // Detail: comments, edit, visibility
@@ -156,7 +172,7 @@ if (cards !== 1) throw new Error(`expected 1 card after delete, got ${cards}`);
 step('deleting a scrap removes it from the library');
 
 // Account type change: existing scraps keep their visibility unless asked
-await page.getByText('Settings').filter({ visible: true }).click();
+await page.getByRole('link', { name: 'Settings' }).filter({ visible: true }).click();
 await page.getByText(`@${username}`).waitFor();
 await page.getByRole('radio', { name: 'Public' }).filter({ visible: true }).click();
 await page.getByText("1 of your saved scraps isn't public. Make all your scraps public too?").waitFor();
@@ -165,26 +181,26 @@ await page.getByRole('button', { name: 'Keep as they are' }).click();
 await page.waitForTimeout(300);
 if (await page.getByText('Make all your scraps public too?').count()) throw new Error('suggestion not dismissed');
 await page.goto(`${BASE}/`);
-await page.getByText('🔒 Only me').waitFor();
-if (await page.getByText('🌐 Public').count()) throw new Error('existing scrap changed with the account type');
+await page.getByRole('img', { name: 'Only me' }).waitFor();
+if (await page.getByRole('img', { name: 'Public' }).count()) throw new Error('existing scrap changed with the account type');
 await page.getByPlaceholder('Paste a link…').fill('https://example.org/new-after-switch');
 await page.getByRole('button', { name: 'Save' }).click();
-await page.getByText('🌐 Public').waitFor();
+await page.getByRole('img', { name: 'Public' }).waitFor();
 step('switching to public keeps existing scraps; new scraps use the new default');
 
-await page.getByText('Settings').filter({ visible: true }).click();
+await page.getByRole('link', { name: 'Settings' }).filter({ visible: true }).click();
 await page.getByText(`@${username}`).waitFor();
 await page.getByRole('radio', { name: 'Only me' }).filter({ visible: true }).click();
 await page.getByText('1 of your saved scraps is visible to others. Make all your scraps private too?').waitFor();
 await page.getByRole('button', { name: 'Make all private' }).click();
 await page.getByText('Done — 1 scrap updated.').waitFor();
 await page.goto(`${BASE}/`);
-await page.getByText('🔒 Only me').first().waitFor();
-if (await page.getByText('🌐 Public').count()) throw new Error('bulk change to private did not apply');
+await page.getByRole('img', { name: 'Only me' }).first().waitFor();
+if (await page.getByRole('img', { name: 'Public' }).count()) throw new Error('bulk change to private did not apply');
 step('accepting the suggestion moves all existing scraps to the new mode');
 
 // Settings: Hebrew flips the document to RTL
-await page.getByText('Settings').click();
+await page.getByRole('link', { name: 'Settings' }).filter({ visible: true }).click();
 await page.getByText(`@${username}`).waitFor();
 await page.getByRole('radio', { name: 'עברית' }).click();
 await page.getByText('התנתקות').waitFor();

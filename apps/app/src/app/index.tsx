@@ -11,7 +11,8 @@ import {
 } from '@fwdme/core';
 import { Link, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { LayoutDashboard, Search, Settings as SettingsIcon, X } from 'lucide-react-native';
 import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
@@ -29,15 +30,15 @@ import {
   usePalette,
   type VisibilityChoice,
 } from '@/ui/components';
-import { ScrapGrid } from '@/ui/scrap-grid';
+import { ScrapGrid, ViewSwitcher, useScrapView } from '@/ui/scrap-grid';
 
 const PAGE = 30;
 
 export default function LibraryScreen() {
   const { session } = useSession();
   const { t } = useI18n();
-  const c = usePalette();
   const userId = session!.user.id;
+  const [view, setView] = useScrapView();
   const [scraps, setScraps] = useState<Scrap[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -149,13 +150,9 @@ export default function LibraryScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <View style={{ flexDirection: 'row' }}>
-              <Link href="/boards" style={{ paddingHorizontal: space.md }}>
-                <Text style={{ color: c.accent, fontWeight: '600' }}>{t('boards')}</Text>
-              </Link>
-              <Link href="/settings" style={{ paddingHorizontal: space.md }}>
-                <Text style={{ color: c.accent, fontWeight: '600' }}>{t('settings')}</Text>
-              </Link>
+            <View style={{ flexDirection: 'row', gap: space.xs, paddingHorizontal: space.sm }}>
+              <HeaderIcon href="/boards" label={t('boards')} icon={LayoutDashboard} />
+              <HeaderIcon href="/settings" label={t('settings')} icon={SettingsIcon} />
             </View>
           ),
         }}
@@ -168,20 +165,25 @@ export default function LibraryScreen() {
           }}
         />
         <SearchField value={typed} onChange={setTyped} />
-        <CategoryChips counts={counts} value={category} onChange={pickCategory} />
+        <View className="flex-row items-center gap-3">
+          <View className="flex-1">
+            <CategoryChips counts={counts} value={category} onChange={pickCategory} />
+          </View>
+          <ViewSwitcher value={view} onChange={setView} />
+        </View>
         <Message text={loadError} />
         {scraps === null ? null : scraps.length === 0 ? (
           query && similarOnly.length > 0 ? null : (
             <Body muted>{query ? t('noSearchResults') : category ? t('emptyCategory') : t('emptyLibrary')}</Body>
           )
         ) : (
-          <ScrapGrid scraps={scraps} />
+          <ScrapGrid scraps={scraps} view={view} />
         )}
         {hasMore ? <Button kind="secondary" title={t('loadMore')} onPress={() => load(scraps?.length ?? 0)} /> : null}
         {query && similarOnly.length > 0 ? (
           <>
-            <Text style={{ color: c.text, fontWeight: '700', fontSize: 16 }}>{t('similarIdeas')}</Text>
-            <ScrapGrid scraps={similarOnly} />
+            <Text className="mt-2 text-[17px] font-bold text-text">{t('similarIdeas')}</Text>
+            <ScrapGrid scraps={similarOnly} view={view} />
           </>
         ) : null}
       </Screen>
@@ -246,31 +248,45 @@ function AddScrapForm({ onSaved }: { onSaved: () => void }) {
 }
 
 function SearchField({ value, onChange }: { value: string; onChange: (text: string) => void }) {
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const c = usePalette();
   return (
-    <View style={{ justifyContent: 'center' }}>
-      <Field
+    <View className="min-h-[48px] flex-row items-center gap-2 rounded-xl border border-border/70 bg-surface px-3.5">
+      <Search size={18} color={c.muted} strokeWidth={2.2} />
+      <TextInput
         value={value}
         onChangeText={onChange}
         placeholder={t('searchPlaceholder')}
+        placeholderTextColor={c.muted}
         accessibilityLabel={t('search')}
         autoCorrect={false}
         returnKeyType="search"
         inputMode="search"
-        style={{ paddingEnd: 44 }}
+        className="flex-1 py-3 text-[15px] text-text"
+        style={{ textAlign: isRTL ? 'right' : 'left' }}
       />
       {value ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('clearSearch')}
           onPress={() => onChange('')}
-          style={{ position: 'absolute', end: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+          className="h-8 w-8 items-center justify-center rounded-full bg-surface-2"
         >
-          <Text style={{ color: c.muted, fontSize: 16 }}>✕</Text>
+          <X size={16} color={c.muted} strokeWidth={2.4} />
         </Pressable>
       ) : null}
     </View>
+  );
+}
+
+function HeaderIcon({ href, label, icon: Icon }: { href: '/boards' | '/settings'; label: string; icon: typeof Search }) {
+  const c = usePalette();
+  return (
+    <Link href={href} asChild>
+      <Pressable accessibilityRole="link" accessibilityLabel={label} className="h-10 w-10 items-center justify-center rounded-full">
+        <Icon size={22} color={c.text} strokeWidth={2} />
+      </Pressable>
+    </Link>
   );
 }
 

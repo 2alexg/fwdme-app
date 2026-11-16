@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fwd:Me greens as RGB channels, so Tailwind's opacity modifiers work
+   (bg-accent/10). Every text/background pair meets WCAG AA (4.5:1) in both
+   themes. The theme follows the phone's light/dark setting. */
+:root {
+  --bg: 243 247 244;
+  --surface: 255 255 255;
+  --surface-2: 236 243 238;
+  --text: 19 32 26;
+  --muted: 90 107 97;
+  --border: 214 227 218;
+  --accent: 4 120 87;
+  --accent-text: 255 255 255;
+  --accent-soft: 220 239 228;
+  --danger: 185 28 28;
+  --success: 21 128 61;
+  --chip: 230 240 233;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: 13 20 17;
+    --surface: 21 32 26;
+    --surface-2: 27 40 33;
+    --text: 230 240 234;
+    --muted: 152 170 159;
+    --border: 40 57 47;
+    --accent: 52 211 153;
+    --accent-text: 5 46 31;
+    --accent-soft: 20 52 39;
+    --danger: 248 113 113;
+    --success: 74 222 128;
+    --chip: 29 43 35;
+  }
+}

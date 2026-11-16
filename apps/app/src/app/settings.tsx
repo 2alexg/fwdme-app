@@ -9,12 +9,13 @@ import {
   type Visibility,
 } from '@fwdme/core';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
+import { Languages, LogOut, ShieldCheck, UserRound } from 'lucide-react-native';
 import { forgetShareToken } from '@/lib/share-token';
 import { supabase } from '@/lib/supabase';
-import { Body, Button, Card, Loading, Message, Screen, Segmented, space, usePalette } from '@/ui/components';
+import { Body, Button, Card, CardTitle, Loading, Message, Screen, Segmented, space, usePalette } from '@/ui/components';
 
 export default function SettingsScreen() {
   const { profile, setProfile } = useSession();
@@ -72,12 +73,12 @@ export default function SettingsScreen() {
   return (
     <Screen narrow>
       <Card>
-        <Text style={{ color: c.text, fontWeight: '700' }}>{t('account')}</Text>
+        <CardTitle icon={UserRound}>{t('account')}</CardTitle>
         <Body>@{profile.username}</Body>
       </Card>
 
       <Card>
-        <Text style={{ color: c.text, fontWeight: '700' }}>{t('accountType')}</Text>
+        <CardTitle icon={ShieldCheck}>{t('accountType')}</CardTitle>
         <Segmented
           value={profile.account_type}
           onChange={changeAccountType}
@@ -107,7 +108,7 @@ export default function SettingsScreen() {
       </Card>
 
       <Card>
-        <Text style={{ color: c.text, fontWeight: '700' }}>{t('language')}</Text>
+        <CardTitle icon={Languages}>{t('language')}</CardTitle>
         <Segmented
           value={profile.locale as Locale}
           onChange={(locale) => update({ locale })}
@@ -120,7 +121,7 @@ export default function SettingsScreen() {
 
       <Message text={error} />
       <Message text={notice} tone="success" />
-      <Button kind="secondary" title={t('signOut')} onPress={() => forgetShareToken().then(() => signOut(supabase)).catch((e) => setError(errorText(e)))} />
+      <Button kind="secondary" icon={LogOut} title={t('signOut')} onPress={() => forgetShareToken().then(() => signOut(supabase)).catch((e) => setError(errorText(e)))} />
     </Screen>
   );
 }

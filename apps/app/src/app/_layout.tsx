@@ -1,3 +1,4 @@
+import '../../global.css';
 import { Stack, router, usePathname } from 'expo-router';
 import { useCallback, useEffect } from 'react';
 import { Alert, Platform } from 'react-native';
@@ -48,8 +49,10 @@ function Routes() {
       <ShareRedirect signedIn={signedIn} />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: c.surface },
+          headerStyle: { backgroundColor: c.bg },
+          headerShadowVisible: false,
           headerTintColor: c.text,
+          headerTitleStyle: { fontWeight: '700' },
           contentStyle: { backgroundColor: c.bg },
           headerBackTitle: t('back'),
         }}
