@@ -4,7 +4,7 @@
 import { categoryEmoji, categoryLabel, hostnameOf, isProcessing, scrapImageUrl, scrapTitle, type Scrap } from '@fwdme/core';
 import { Link } from 'expo-router';
 import { LayoutGrid, List, Rows3, type LucideIcon } from 'lucide-react-native';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useSyncExternalStore, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { useI18n, type StringKey } from '@/lib/i18n';
 import { authStorage } from '@/lib/storage';
@@ -29,18 +29,29 @@ function readView(): ScrapView {
   return 'grid';
 }
 
-/** The chosen layout, remembered on this device. */
+// One choice for every screen (the tabs stay mounted, so they all listen).
+let currentView: ScrapView | null = null;
+const viewListeners = new Set<() => void>();
+
+function setScrapView(next: ScrapView) {
+  currentView = next;
+  try {
+    authStorage.setItem(VIEW_KEY, next);
+  } catch {
+    // Not remembered this time; still switches.
+  }
+  viewListeners.forEach((listener) => listener());
+}
+
+function subscribeView(listener: () => void) {
+  viewListeners.add(listener);
+  return () => viewListeners.delete(listener);
+}
+
+/** The chosen layout, remembered on this device and shared by all screens. */
 export function useScrapView(): [ScrapView, (view: ScrapView) => void] {
-  const [view, setViewState] = useState<ScrapView>(readView);
-  const setView = useCallback((next: ScrapView) => {
-    setViewState(next);
-    try {
-      authStorage.setItem(VIEW_KEY, next);
-    } catch {
-      // Not remembered this time; still switches.
-    }
-  }, []);
-  return [view, setView];
+  const view = useSyncExternalStore(subscribeView, () => (currentView ??= readView()));
+  return [view, setScrapView];
 }
 
 /** Three icon buttons: grid, wide cards, list. */

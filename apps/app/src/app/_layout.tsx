@@ -11,7 +11,7 @@ import { Loading, usePalette } from '@/ui/components';
 
 // Keep the library underneath screens opened from outside the app (a share,
 // "Open in Fwd:Me"), so there's always a way back to it.
-export const unstable_settings = { anchor: 'index' };
+export const unstable_settings = { anchor: '(tabs)' };
 
 export default function RootLayout() {
   return (
@@ -58,10 +58,8 @@ function Routes() {
         }}
       >
         <Stack.Protected guard={signedIn} redirectTo="/sign-in">
-          <Stack.Screen name="index" options={{ title: t('library') }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false, title: t('library') }} />
           <Stack.Screen name="scrap/[id]" options={{ title: '' }} />
-          <Stack.Screen name="settings" options={{ title: t('settings') }} />
-          <Stack.Screen name="boards" options={{ title: t('boards') }} />
           <Stack.Screen name="board/[id]" options={{ title: '' }} />
           <Stack.Screen name="share" options={{ headerShown: false, gestureEnabled: false }} />
         </Stack.Protected>

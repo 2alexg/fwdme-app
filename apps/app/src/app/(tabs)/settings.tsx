@@ -71,7 +71,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <Screen narrow>
+    <Screen narrow tabbed>
       <Card>
         <CardTitle icon={UserRound}>{t('account')}</CardTitle>
         <Body>@{profile.username}</Body>

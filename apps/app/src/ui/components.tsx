@@ -60,16 +60,28 @@ export const MAX_WIDTH = 1080;
  * The page layout for every screen. Android draws the app edge to edge, under
  * the status bar and the navigation bar, so the content keeps clear of both:
  * the bottom inset always, the top one when the screen has no header bar
- * (`noHeader`; the header already sits below the status bar).
+ * (`noHeader`; the header already sits below the status bar). Tab screens
+ * (`tabbed`) end above the tab bar, which handles the bottom inset itself.
  */
-export function Screen({ children, narrow, noHeader }: { children: ReactNode; narrow?: boolean; noHeader?: boolean }) {
+export function Screen({
+  children,
+  narrow,
+  noHeader,
+  tabbed,
+}: {
+  children: ReactNode;
+  narrow?: boolean;
+  noHeader?: boolean;
+  /** Inside a tab: the tab bar already keeps clear of the navigation bar. */
+  tabbed?: boolean;
+}) {
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
       className="flex-1 bg-bg"
       contentContainerStyle={{
         paddingTop: space.lg + (noHeader ? insets.top : 0),
-        paddingBottom: space.xl + insets.bottom,
+        paddingBottom: space.xl + (tabbed ? 0 : insets.bottom),
         paddingLeft: space.lg + insets.left,
         paddingRight: space.lg + insets.right,
         alignItems: 'center',

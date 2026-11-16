@@ -224,8 +224,13 @@ Links that were organized without a key (`enriched_at is null`) can be re-queued
   same colours as values for icons and placeholders.
 - Shared building blocks live in `src/ui/components.tsx` (Card, CardTitle, Button with icons,
   Segmented, Chip, Field…); icons come from `lucide-react-native`.
-- The library and board pages show scraps as a grid, wide cards or a compact list (`src/ui/scrap-grid.tsx`);
-  the choice is remembered on the device.
+- Navigation is a bottom tab bar (`src/app/(tabs)`): Library, Boards, Search, Settings. A scrap or a board
+  opens on top of the tabs. The Library and Search tabs share one screen (`src/ui/library-view.tsx`).
+- The library's + button opens the "Save a link" sheet (`src/ui/add-scrap-sheet.tsx`).
+- The library, search and board pages show scraps as a grid, wide cards or a compact list
+  (`src/ui/scrap-grid.tsx`); the choice is shared by all screens and remembered on the device.
+- `darkMode: 'class'` in `tailwind.config.js` is deliberate: dark mode still follows the system through
+  the CSS variables, and the flag stops NativeWind's web runtime from throwing when its stylesheet loads late.
 
 ## Changing the schema
 

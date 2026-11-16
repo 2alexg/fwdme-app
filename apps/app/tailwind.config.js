@@ -2,6 +2,10 @@
 const token = (name) => `rgb(var(--${name}) / <alpha-value>)`;
 
 module.exports = {
+  // Light/dark comes from the CSS variables in global.css (prefers-color-scheme),
+  // which follow the system. 'class' only stops NativeWind's web runtime from
+  // throwing when its stylesheet loads late ("Cannot manually set color scheme").
+  darkMode: 'class',
   content: ['./src/**/*.{ts,tsx}'],
   presets: [require('nativewind/preset')],
   theme: {

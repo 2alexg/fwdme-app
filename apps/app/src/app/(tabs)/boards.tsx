@@ -1,5 +1,5 @@
 import { boardCoverUrls, createBoard, listMyBoards, reorderBoards, type Board } from '@fwdme/core';
-import { Link, Stack, router, useFocusEffect } from 'expo-router';
+import { Link, Tabs, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useI18n } from '@/lib/i18n';
@@ -45,7 +45,7 @@ export default function BoardsScreen() {
 
   return (
     <>
-      <Stack.Screen
+      <Tabs.Screen
         options={{
           headerRight: () =>
             boards && boards.length > 1 ? (
@@ -59,7 +59,7 @@ export default function BoardsScreen() {
             ) : null,
         }}
       />
-      <Screen>
+      <Screen tabbed>
         {reordering ? null : <NewBoardForm onCreated={(id) => router.push({ pathname: '/board/[id]', params: { id } })} />}
         <Message text={error} />
         {boards === null ? null : boards.length === 0 ? (
