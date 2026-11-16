@@ -201,6 +201,7 @@ export default function SettingsScreen() {
             <Field
               label={t('deleteAccountType')}
               placeholder={profile.username}
+              ltr
               value={deleting.typed}
               onChangeText={(typed) => setDeleting({ ...deleting, typed })}
               autoCapitalize="none"

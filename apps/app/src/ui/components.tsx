@@ -3,7 +3,7 @@
 // light/dark setting. usePalette() gives the same colours as plain values for
 // the few places that need them outside className (icons, placeholders).
 import type { Visibility } from '@fwdme/core';
-import { Globe, Lock, Users, type LucideIcon } from 'lucide-react-native';
+import { ExternalLink, Globe, Lock, LogOut, Send, Users, type LucideIcon } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -16,6 +16,7 @@ import {
   View,
   useColorScheme,
   type TextInputProps,
+  type TextStyle,
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,6 +53,28 @@ export type Palette = typeof light;
 
 export function usePalette(): Palette {
   return useColorScheme() === 'dark' ? dark : light;
+}
+
+// Icons that point forward or out of the app: flipped in Hebrew (right to left).
+const MIRRORED_ICONS = new Set<LucideIcon>([ExternalLink, LogOut, Send]);
+
+/** Style that flips a directional icon in right-to-left layouts (undefined otherwise). */
+export function useIconFlip(Icon?: LucideIcon) {
+  const { isRTL } = useI18n();
+  return isRTL && Icon && MIRRORED_ICONS.has(Icon) ? { transform: [{ scaleX: -1 }] } : undefined;
+}
+
+/**
+ * Text direction for an input on web. An empty input shows its placeholder in
+ * the app's direction; typed text finds its own (Hebrew or English).
+ * Inputs for Latin-only content (email, links, usernames) are left to right
+ * once something is typed.
+ */
+export function useInputDirection(value: string | undefined, ltr?: boolean): TextStyle {
+  const { isRTL } = useI18n();
+  if (ltr && value) return { textAlign: 'left', writingDirection: 'ltr' };
+  if (Platform.OS !== 'web') return {};
+  return { textAlign: isRTL ? 'right' : 'left', writingDirection: value ? undefined : isRTL ? 'rtl' : 'ltr' };
 }
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
@@ -107,9 +130,10 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
 /** A card's heading: small, bold, with an optional icon. */
 export function CardTitle({ children, icon: Icon }: { children: ReactNode; icon?: LucideIcon }) {
   const c = usePalette();
+  const flip = useIconFlip(Icon);
   return (
     <View className="flex-row items-center gap-2">
-      {Icon ? <Icon size={17} color={c.muted} strokeWidth={2.2} /> : null}
+      {Icon ? <Icon size={17} color={c.muted} strokeWidth={2.2} style={flip} /> : null}
       <Text className="text-[15px] font-bold text-text">{children}</Text>
     </View>
   );
@@ -144,9 +168,9 @@ export function Body({ children, muted, small }: { children: ReactNode; muted?: 
   );
 }
 
-export function Field({ label, hint, ...props }: TextInputProps & { label?: string; hint?: string }) {
+export function Field({ label, hint, ltr, ...props }: TextInputProps & { label?: string; hint?: string; ltr?: boolean }) {
   const c = usePalette();
-  const { isRTL } = useI18n();
+  const direction = useInputDirection(props.value, ltr);
   const [focused, setFocused] = useState(false);
   return (
     <View className="gap-1.5">
@@ -163,7 +187,7 @@ export function Field({ label, hint, ...props }: TextInputProps & { label?: stri
           props.onBlur?.(e);
         }}
         className={`rounded-xl border px-3.5 py-3 text-[15px] text-text ${focused ? 'border-accent bg-surface' : 'border-border/70 bg-surface-2'}`}
-        style={[{ textAlign: Platform.OS === 'web' ? (isRTL ? 'right' : 'left') : undefined }, props.multiline && { minHeight: 84, textAlignVertical: 'top' }, props.style]}
+        style={[direction, props.multiline && { minHeight: 84, textAlignVertical: 'top' }, props.style]}
       />
       {hint ? <Body small muted>{hint}</Body> : null}
     </View>
@@ -195,6 +219,7 @@ export function Button({
 }) {
   const c = usePalette();
   const off = disabled || busy;
+  const flip = useIconFlip(Icon);
   const fg = kind === 'primary' ? c.accentText : kind === 'danger' ? c.danger : kind === 'link' ? c.accent : c.text;
   return (
     <Pressable
@@ -208,7 +233,7 @@ export function Button({
         <ActivityIndicator color={fg} />
       ) : (
         <>
-          {Icon ? <Icon size={18} color={fg} strokeWidth={2.2} /> : null}
+          {Icon ? <Icon size={18} color={fg} strokeWidth={2.2} style={flip} /> : null}
           <Text className={`text-[15px] font-semibold ${BUTTON[kind].text}`}>{title}</Text>
         </>
       )}

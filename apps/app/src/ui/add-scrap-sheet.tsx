@@ -120,6 +120,7 @@ function AddScrapSheet({
             autoCapitalize="none"
             autoCorrect={false}
             inputMode="url"
+            ltr
             keyboardType="url"
             onSubmitEditing={() => link.trim() && submit()}
             accessibilityLabel={t('pasteLink')}

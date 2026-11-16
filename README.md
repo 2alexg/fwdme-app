@@ -72,6 +72,11 @@ worker isn't served). The e2e run needs the worker served.
 - **Languages:** Hebrew (default) and English, chosen at sign-up and in Settings. On web the
   document switches to `dir="rtl"`. On iOS and Android the app switches React Native's layout
   direction and reloads once when the language changes (`src/lib/direction.ts`).
+- **RTL details:** icons that point forward or out (Send, Sign out, Open link) are flipped in Hebrew
+  (`useIconFlip`). Email, password, username and link fields are left to right once something is
+  typed. Empty fields show their placeholder in the app's direction (`useInputDirection`). Number
+  and letter ranges in Hebrew strings (3–30, a–z) are wrapped in left-to-right isolates (U+2066/U+2069)
+  so they don't come out reversed.
 
 ## How it works (milestone 3): organizing links
 

@@ -39,6 +39,7 @@ export default function SignInScreen() {
           onChangeText={setEmail}
           autoCapitalize="none"
           autoComplete="email"
+          ltr
           keyboardType="email-address"
           inputMode="email"
         />
@@ -48,6 +49,7 @@ export default function SignInScreen() {
           onChangeText={setPassword}
           secureTextEntry
           autoComplete="current-password"
+          ltr
           onSubmitEditing={submit}
         />
         <Message text={error} />
