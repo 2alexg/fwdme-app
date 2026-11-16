@@ -40,11 +40,11 @@ Mailpit at http://127.0.0.1:54324.
 ## Tests
 
 ```sh
-pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards, search, search by meaning, merging redirected links, share tokens (138 checks)
+pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards, search, search by meaning, merging redirected links, share tokens, account deletion, feedback (156 checks)
 pnpm test         # core + enrichment pipeline unit tests, API integration tests against local Supabase
 pnpm typecheck
 pnpm build:web && npx serve -s apps/app/dist -l 8081 &   # then:
-pnpm test:e2e     # sign up → save → organized in background → comment → search → visibility → boards → delete → account type → Hebrew/RTL → sign in again
+pnpm test:e2e     # sign up → save → organized in background → comment → search → visibility → boards → delete → account type → Hebrew/RTL → feedback → sign in again → delete account
 ```
 
 Integration tests skip themselves when local Supabase isn't running (and the background test when the
@@ -198,6 +198,14 @@ worker isn't served). The e2e run needs the worker served.
   environment variable (secret) is set and `SENTRY_ORG` / `SENTRY_PROJECT` are in `eas.json`.
   Until then `SENTRY_DISABLE_AUTO_UPLOAD=true` keeps builds from failing.
 - Check a build: in Settings, long-press the version line at the bottom. It sends a test report.
+
+## How it works (milestone 5): feedback
+
+- **Settings → Send feedback** saves a message with `send_feedback()`, along with the app version,
+  platform, OS version and app language. At most 20 a day per person.
+- People can't read feedback back (no policies on `feedback`); read it in the Supabase dashboard:
+  Table Editor → `feedback`. `user_id` matches the user id on Sentry crash reports. Deleted with
+  the account.
 
 ## Phone builds (EAS) and the cloud database
 

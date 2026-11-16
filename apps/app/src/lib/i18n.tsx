@@ -140,6 +140,14 @@ const en = {
   err_delete_account_failed: 'Couldn’t delete your account. Check your connection and try again.',
   version: 'Version {v}',
   testReportSent: 'Test report sent.',
+  // feedback
+  feedback: 'Send feedback',
+  feedbackNote: 'Something broken, confusing, or an idea? We read everything.',
+  feedbackPlaceholder: 'What happened, or what would you like?',
+  feedbackSend: 'Send',
+  feedbackSent: 'Thanks! Your feedback was sent.',
+  err_empty_feedback: 'Write something first.',
+  err_too_much_feedback: 'That’s a lot of feedback for one day. Try again tomorrow.',
 };
 
 export type StringKey = keyof typeof en;
@@ -272,6 +280,13 @@ const he: Record<StringKey, string> = {
   err_delete_account_failed: 'לא הצלחנו למחוק את החשבון. בדקו את החיבור ונסו שוב.',
   version: 'גרסה {v}',
   testReportSent: 'דוח בדיקה נשלח.',
+  feedback: 'שליחת משוב',
+  feedbackNote: 'משהו לא עובד, לא ברור, או שיש לכם רעיון? אנחנו קוראים הכול.',
+  feedbackPlaceholder: 'מה קרה, או מה הייתם רוצים?',
+  feedbackSend: 'שליחה',
+  feedbackSent: 'תודה! המשוב נשלח.',
+  err_empty_feedback: 'כתבו משהו קודם.',
+  err_too_much_feedback: 'זה הרבה משוב ליום אחד. נסו שוב מחר.',
 };
 
 const dictionaries: Record<Locale, Record<StringKey, string>> = { en, he };
@@ -354,6 +369,8 @@ export function I18nProvider({ locale: preferred, children }: { locale?: Locale;
         user_already_exists: 'err_email_taken',
         'invalid url': 'err_invalid_url',
         delete_account_failed: 'err_delete_account_failed',
+        empty_feedback: 'err_empty_feedback',
+        too_much_feedback: 'err_too_much_feedback',
       };
       const key = known[message] ?? (code ? known[code] : undefined);
       return key ? t(key) : t('err_generic');

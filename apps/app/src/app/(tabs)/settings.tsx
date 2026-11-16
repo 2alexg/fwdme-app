@@ -1,6 +1,7 @@
 import {
   countScrapsNotIn,
   deleteMyAccount,
+  sendFeedback,
   defaultVisibility,
   setAllScrapsVisibility,
   signOut,
@@ -11,11 +12,11 @@ import {
 } from '@fwdme/core';
 import Constants from 'expo-constants';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import { sendTestCrashReport } from '@/lib/crash';
 import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
-import { Languages, LogOut, ShieldCheck, Trash2, UserRound } from 'lucide-react-native';
+import { Languages, LogOut, MessageCircleHeart, Send, ShieldCheck, Trash2, UserRound } from 'lucide-react-native';
 import { forgetShareToken } from '@/lib/share-token';
 import { supabase } from '@/lib/supabase';
 import { Body, Button, Card, CardTitle, Field, Loading, Message, Screen, Segmented, space, usePalette } from '@/ui/components';
@@ -31,6 +32,9 @@ export default function SettingsScreen() {
   const [suggestion, setSuggestion] = useState<{ target: Visibility; count: number } | null>(null);
   const [applying, setApplying] = useState(false);
   // Delete account: opened, then the username typed to confirm.
+  const [feedback, setFeedback] = useState('');
+  const [feedbackState, setFeedbackState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<{ typed: string; busy: boolean } | null>(null);
 
   if (!profile) return <Loading />;
@@ -78,6 +82,24 @@ export default function SettingsScreen() {
 
   const usernameTyped =
     !!deleting && deleting.typed.trim().replace(/^@/, '').toLowerCase() === profile.username.toLowerCase();
+
+  async function submitFeedback() {
+    setFeedbackState('sending');
+    setFeedbackError(null);
+    try {
+      await sendFeedback(supabase, feedback, {
+        appVersion: Constants.expoConfig?.version,
+        platform: Platform.OS,
+        osVersion: String(Platform.Version ?? ''),
+        locale: profile!.locale,
+      });
+      setFeedback('');
+      setFeedbackState('sent');
+    } catch (e) {
+      setFeedbackError(errorText(e));
+      setFeedbackState('idle');
+    }
+  }
 
   async function deleteAccount() {
     if (!usernameTyped) return;
@@ -139,6 +161,31 @@ export default function SettingsScreen() {
             { value: 'he', label: 'עברית' },
             { value: 'en', label: 'English' },
           ]}
+        />
+      </Card>
+
+      <Card>
+        <CardTitle icon={MessageCircleHeart}>{t('feedback')}</CardTitle>
+        <Body small muted>{t('feedbackNote')}</Body>
+        <Field
+          multiline
+          value={feedback}
+          onChangeText={(text) => {
+            setFeedback(text);
+            if (feedbackState === 'sent') setFeedbackState('idle');
+          }}
+          placeholder={t('feedbackPlaceholder')}
+          maxLength={5000}
+          editable={feedbackState !== 'sending'}
+        />
+        <Message text={feedbackError} />
+        <Message text={feedbackState === 'sent' ? t('feedbackSent') : null} tone="success" />
+        <Button
+          icon={Send}
+          title={t('feedbackSend')}
+          onPress={submitFeedback}
+          disabled={!feedback.trim()}
+          busy={feedbackState === 'sending'}
         />
       </Card>
 
