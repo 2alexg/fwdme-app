@@ -7,6 +7,7 @@ import { Globe, Lock, Users, type LucideIcon } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Image,
   Pressable,
   ScrollView,
@@ -162,7 +163,7 @@ export function Field({ label, hint, ...props }: TextInputProps & { label?: stri
           props.onBlur?.(e);
         }}
         className={`rounded-xl border px-3.5 py-3 text-[15px] text-text ${focused ? 'border-accent bg-surface' : 'border-border/70 bg-surface-2'}`}
-        style={[{ textAlign: isRTL ? 'right' : 'left' }, props.multiline && { minHeight: 84, textAlignVertical: 'top' }, props.style]}
+        style={[{ textAlign: Platform.OS === 'web' ? (isRTL ? 'right' : 'left') : undefined }, props.multiline && { minHeight: 84, textAlignVertical: 'top' }, props.style]}
       />
       {hint ? <Body small muted>{hint}</Body> : null}
     </View>
