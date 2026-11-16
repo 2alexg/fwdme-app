@@ -8,6 +8,7 @@ import {
   addScrapToBoard,
   createShareToken,
   deleteMyAccount,
+  sendFeedback,
   revokeShareToken,
   createBoard,
   deleteBoard,
@@ -270,6 +271,12 @@ describe.skipIf(!reachable)('api against local supabase', () => {
     await expect(signIn(client(), email, password)).rejects.toBeInstanceOf(ApiError);
     expect(await usernameAvailable(anon, `carol_${run}`)).toBe(true);
     expect(await getScrap(bob, bobs.scrapId)).not.toBeNull();
+  });
+
+  it('sends feedback when signed in', async () => {
+    await sendFeedback(alice, 'Love it', { appVersion: '1.0.0', platform: 'android', osVersion: '15', locale: 'en' });
+    await expect(sendFeedback(alice, '   ')).rejects.toThrow('empty_feedback');
+    await expect(sendFeedback(anon, 'hi')).rejects.toBeInstanceOf(ApiError);
   });
 
   it('refuses saves without a session or a link', async () => {

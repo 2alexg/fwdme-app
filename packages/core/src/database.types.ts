@@ -75,6 +75,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"feedback": {
+                  Row: {
+                    "app_version": string | null,"body": string,"created_at": string,"id": string,"locale": string | null,"os_version": string | null,"platform": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "app_version"?: string | null,"body": string,"created_at"?: string,"id"?: string,"locale"?: string | null,"os_version"?: string | null,"platform"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "app_version"?: string | null,"body"?: string,"created_at"?: string,"id"?: string,"locale"?: string | null,"os_version"?: string | null,"platform"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "feedback_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "feedback_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"follows": {
                   Row: {
                     "created_at": string,"followee_id": string,"follower_id": string,"id": string
@@ -313,6 +339,9 @@ isOneToOne: false
 { Args: { "p_category"?: string,"p_limit"?: number,"p_offset"?: number,"p_query": string }; Returns: {
               "rank": number,"scrap_id": string
             }[]
+                           },
+"send_feedback":
+{ Args: { "p_app_version"?: string,"p_body": string,"p_locale"?: string,"p_os_version"?: string,"p_platform"?: string }; Returns: string
                            },
 "set_all_scraps_visibility":
 { Args: { "p_visibility": Database["public"]['Enums']["visibility"] }; Returns: number

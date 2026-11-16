@@ -151,6 +151,26 @@ export async function deleteMyAccount(db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Feedback (Settings → Send feedback; read in the Supabase dashboard)
+// ---------------------------------------------------------------------------
+
+export type FeedbackContext = { appVersion?: string; platform?: string; osVersion?: string; locale?: string };
+
+export async function sendFeedback(db: Db, body: string, context: FeedbackContext = {}): Promise<void> {
+  const text = body.trim();
+  if (!text) throw new ApiError('empty_feedback');
+  unwrap(
+    await db.rpc('send_feedback', {
+      p_body: text,
+      p_app_version: context.appVersion,
+      p_platform: context.platform,
+      p_os_version: context.osVersion,
+      p_locale: context.locale,
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Share tokens (the iOS share sheet saves with one; see the share_tokens migration)
 // ---------------------------------------------------------------------------
 

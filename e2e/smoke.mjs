@@ -231,6 +231,14 @@ await page.getByRole('dialog').getByRole('button', { name: 'סגירה' }).last(
 await page.screenshot({ path: `${out}/library-he.png`, fullPage: true });
 step('switching to Hebrew translates the UI and sets dir=rtl');
 
+// Feedback from Settings
+await page.goto(`${BASE}/settings`);
+await page.getByPlaceholder('מה קרה, או מה הייתם רוצים?').fill('הכפתור קטן מדי');
+await page.getByRole('button', { name: 'שליחה' }).click();
+await page.getByText('תודה! המשוב נשלח.').waitFor();
+await page.screenshot({ path: `${out}/settings-feedback-he.png`, fullPage: true });
+step('feedback is sent from Settings');
+
 // Sign out, then sign back in
 await page.goto(`${BASE}/settings`);
 await page.getByRole('button', { name: 'התנתקות' }).click();
@@ -252,12 +260,26 @@ await page.screenshot({ path: `${out}/library-mobile.png`, fullPage: true });
 if (overflow > 1) throw new Error(`horizontal overflow ${overflow}px at phone width`);
 step('phone width has no horizontal scroll');
 
+// Delete the account (last: the test user is gone afterwards)
+await page.goto(`${BASE}/settings`);
+await page.getByRole('button', { name: 'מחיקת החשבון', exact: true }).click();
+const forever = page.getByRole('button', { name: 'מחיקת החשבון שלי' });
+await page.getByPlaceholder(username, { exact: true }).fill(`@${username.toUpperCase()}`);
+await forever.click();
+await page.locator('input:visible').nth(1).waitFor({ timeout: 15000 });
+await page.locator('input:visible').nth(0).fill(email);
+await page.locator('input:visible').nth(1).fill(password);
+await page.getByRole('button').first().click();
+await page.getByRole('alert').waitFor();
+step('deleting the account signs out, and the account no longer signs in');
+
 await browser.close();
-// Deliberate failures log one 400 (wrong password) and one 409 (duplicate board name).
+// Deliberate failures log 400s (wrong password, deleted account), one 403 (signing out a deleted
+// account; supabase-js ignores it) and one 409 (duplicate board name).
 const relevant = errors.filter((e) => !/favicon|Download the React DevTools/.test(e));
-for (const status of ['status of 400', 'status of 409']) {
+for (const [status, count] of [['status of 400', 2], ['status of 403', 1], ['status of 409', 1]]) {
   const expected = relevant.filter((e) => e.includes(status));
-  if (expected.length === 1) relevant.splice(relevant.indexOf(expected[0]), 1);
+  if (expected.length === count) for (const e of expected) relevant.splice(relevant.indexOf(e), 1);
 }
 if (relevant.length) {
   console.log('Console errors:\n' + relevant.join('\n'));
