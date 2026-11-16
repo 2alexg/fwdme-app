@@ -1,43 +1,36 @@
+// The library and the Search tab share this screen. The library browses
+// everything (by category) and has the + button for saving a link; Search
+// starts with an empty field and shows matches by words and by meaning.
 import {
   categoryEmoji,
   categoryLabel,
   isProcessing,
   listMyScraps,
   myCategoryCounts,
-  saveScrap,
   searchByMeaning,
   searchMyScraps,
   type Scrap,
 } from '@fwdme/core';
-import { Link, Stack, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Search, X } from 'lucide-react-native';
 import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 import { usePollWhile } from '@/lib/use-poll';
-import {
-  Body,
-  Button,
-  Card,
-  Chip,
-  Field,
-  Message,
-  Screen,
-  NewScrapVisibilityPicker,
-  space,
-  usePalette,
-  type VisibilityChoice,
-} from '@/ui/components';
-import { ScrapGrid } from '@/ui/scrap-grid';
+import { AddScrapButton } from '@/ui/add-scrap-sheet';
+import { Body, Button, Chip, Message, Screen, space, usePalette } from '@/ui/components';
+import { ScrapGrid, ViewSwitcher, useScrapView } from '@/ui/scrap-grid';
 
 const PAGE = 30;
 
-export default function LibraryScreen() {
+export function LibraryView({ mode }: { mode: 'library' | 'search' }) {
+  const searching = mode === 'search';
   const { session } = useSession();
   const { t } = useI18n();
-  const c = usePalette();
   const userId = session!.user.id;
+  const [view, setView] = useScrapView();
   const [scraps, setScraps] = useState<Scrap[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -46,6 +39,7 @@ export default function LibraryScreen() {
   const [typed, setTyped] = useState('');
   const [query, setQuery] = useState('');
   const { errorText } = useI18n();
+  const [notice, setNotice] = useState<string | null>(null);
   const loaded = useRef(0);
   // Only the newest request may update the list (typing fires many).
   const latest = useRef(0);
@@ -96,6 +90,12 @@ export default function LibraryScreen() {
   const load = useCallback(
     async (offset = 0) => {
       const request = ++latest.current;
+      if (searching && !query) {
+        // Nothing typed yet: nothing to show.
+        setScraps(null);
+        setHasMore(false);
+        return;
+      }
       try {
         let limit = offset === 0 ? Math.max(PAGE, loaded.current) : PAGE;
         const filter = { limit, offset, category: category ?? undefined };
@@ -118,7 +118,7 @@ export default function LibraryScreen() {
         setLoadError(errorText(e));
       }
     },
-    [userId, errorText, category, query],
+    [userId, errorText, category, query, searching],
   );
 
   // Reload whenever the library comes back into view (after a delete, etc.).
@@ -136,6 +136,12 @@ export default function LibraryScreen() {
     loadCounts();
   });
 
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   const shown = new Set(scraps?.map((s) => s.id));
   const similarOnly = similar.filter((s) => !shown.has(s.id));
 
@@ -145,129 +151,93 @@ export default function LibraryScreen() {
   }
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <View style={{ flexDirection: 'row' }}>
-              <Link href="/boards" style={{ paddingHorizontal: space.md }}>
-                <Text style={{ color: c.accent, fontWeight: '600' }}>{t('boards')}</Text>
-              </Link>
-              <Link href="/settings" style={{ paddingHorizontal: space.md }}>
-                <Text style={{ color: c.accent, fontWeight: '600' }}>{t('settings')}</Text>
-              </Link>
-            </View>
-          ),
-        }}
-      />
-      <Screen>
-        <AddScrapForm
-          onSaved={() => {
-            load(0);
-            loadCounts();
-          }}
-        />
-        <SearchField value={typed} onChange={setTyped} />
-        <CategoryChips counts={counts} value={category} onChange={pickCategory} />
+    <View className="flex-1 bg-bg">
+      <Screen tabbed>
+        {searching ? <SearchField value={typed} onChange={setTyped} autoFocus /> : <SearchLink />}
+        <Message text={notice} tone="success" />
+        <View className="flex-row items-center gap-3">
+          <View className="flex-1">
+            <CategoryChips counts={counts} value={category} onChange={pickCategory} />
+          </View>
+          <ViewSwitcher value={view} onChange={setView} />
+        </View>
         <Message text={loadError} />
-        {scraps === null ? null : scraps.length === 0 ? (
+        {scraps === null ? (
+          searching && !query ? <Body muted>{t('searchHint')}</Body> : null
+        ) : scraps.length === 0 ? (
           query && similarOnly.length > 0 ? null : (
             <Body muted>{query ? t('noSearchResults') : category ? t('emptyCategory') : t('emptyLibrary')}</Body>
           )
         ) : (
-          <ScrapGrid scraps={scraps} />
+          <ScrapGrid scraps={scraps} view={view} />
         )}
         {hasMore ? <Button kind="secondary" title={t('loadMore')} onPress={() => load(scraps?.length ?? 0)} /> : null}
         {query && similarOnly.length > 0 ? (
           <>
-            <Text style={{ color: c.text, fontWeight: '700', fontSize: 16 }}>{t('similarIdeas')}</Text>
-            <ScrapGrid scraps={similarOnly} />
+            <Text className="mt-2 text-[17px] font-bold text-text">{t('similarIdeas')}</Text>
+            <ScrapGrid scraps={similarOnly} view={view} />
           </>
         ) : null}
+        {/* Room to scroll the last cards out from under the + button. */}
+        {searching ? null : <View style={{ height: 64 }} />}
       </Screen>
-    </>
+      {searching ? null : (
+        <AddScrapButton
+          onSaved={(alreadySaved) => {
+            setNotice(alreadySaved ? t('alreadySaved') : t('saved'));
+            load(0);
+            loadCounts();
+          }}
+        />
+      )}
+    </View>
   );
 }
 
-function AddScrapForm({ onSaved }: { onSaved: () => void }) {
-  const { t, errorText } = useI18n();
-  const [link, setLink] = useState('');
-  const [comment, setComment] = useState('');
-  const [visibility, setVisibility] = useState<VisibilityChoice>('default');
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ text: string; tone: 'error' | 'success' } | null>(null);
-
-  async function submit() {
-    setBusy(true);
-    setMessage(null);
-    try {
-      const result = await saveScrap(supabase, {
-        input: link,
-        comment,
-        visibility: visibility === 'default' ? null : visibility,
-      });
-      setLink('');
-      setComment('');
-      setVisibility('default');
-      setMessage({ text: result.alreadySaved ? t('alreadySaved') : t('saved'), tone: 'success' });
-      onSaved();
-    } catch (e) {
-      setMessage({ text: errorText(e), tone: 'error' });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Card>
-      <Field
-        value={link}
-        onChangeText={setLink}
-        placeholder={t('pasteLink')}
-        autoCapitalize="none"
-        autoCorrect={false}
-        inputMode="url"
-        keyboardType="url"
-        onSubmitEditing={() => link.trim() && submit()}
-        accessibilityLabel={t('pasteLink')}
-      />
-      <Field
-        value={comment}
-        onChangeText={setComment}
-        placeholder={t('addComment')}
-        multiline
-        accessibilityLabel={t('addComment')}
-      />
-      <NewScrapVisibilityPicker value={visibility} onChange={setVisibility} />
-      <Message text={message?.text ?? null} tone={message?.tone} />
-      <Button title={t('save')} onPress={submit} busy={busy} disabled={!link.trim()} />
-    </Card>
-  );
-}
-
-function SearchField({ value, onChange }: { value: string; onChange: (text: string) => void }) {
+/** On the library: looks like the search field, opens the Search tab. */
+function SearchLink() {
   const { t } = useI18n();
   const c = usePalette();
   return (
-    <View style={{ justifyContent: 'center' }}>
-      <Field
+    <Pressable
+      accessibilityRole="search"
+      accessibilityLabel={t('search')}
+      onPress={() => router.navigate('/search')}
+      className="min-h-[48px] flex-row items-center gap-2 rounded-xl border border-border/70 bg-surface px-3.5"
+    >
+      <Search size={18} color={c.muted} strokeWidth={2.2} />
+      <Text className="flex-1 py-3 text-[15px] text-muted">{t('searchPlaceholder')}</Text>
+    </Pressable>
+  );
+}
+
+function SearchField({ value, onChange, autoFocus }: { value: string; onChange: (text: string) => void; autoFocus?: boolean }) {
+  const { t, isRTL } = useI18n();
+  const c = usePalette();
+  return (
+    <View className="min-h-[48px] flex-row items-center gap-2 rounded-xl border border-border/70 bg-surface px-3.5">
+      <Search size={18} color={c.muted} strokeWidth={2.2} />
+      <TextInput
         value={value}
         onChangeText={onChange}
         placeholder={t('searchPlaceholder')}
+        placeholderTextColor={c.muted}
         accessibilityLabel={t('search')}
+        autoFocus={autoFocus}
         autoCorrect={false}
         returnKeyType="search"
         inputMode="search"
-        style={{ paddingEnd: 44 }}
+        className="flex-1 py-3 text-[15px] text-text"
+        style={{ textAlign: isRTL ? 'right' : 'left' }}
       />
       {value ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('clearSearch')}
           onPress={() => onChange('')}
-          style={{ position: 'absolute', end: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+          className="h-8 w-8 items-center justify-center rounded-full bg-surface-2"
         >
-          <Text style={{ color: c.muted, fontSize: 16 }}>✕</Text>
+          <X size={16} color={c.muted} strokeWidth={2.4} />
         </Pressable>
       ) : null}
     </View>

@@ -28,6 +28,7 @@ import {
   type Visibility,
 } from '@fwdme/core';
 import * as Linking from 'expo-linking';
+import { ExternalLink, Eye, LayoutDashboard, MessageSquare, RotateCw, Sparkles, Tag, Trash2 } from 'lucide-react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
@@ -39,6 +40,7 @@ import {
   Body,
   Button,
   Card,
+  CardTitle,
   Chip,
   Field,
   Loading,
@@ -135,34 +137,55 @@ export default function ScrapScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title }} />
+      {/* The title is on the page, under the picture; the header stays clean. */}
+      <Stack.Screen options={{ title: '' }} />
       <Screen>
-        <Title>{title}</Title>
-        <Message text={error} />
-
-        <Comments scrapId={scrap.id} comments={scrap.comments} onChange={(comments) => setScrap({ ...scrap, comments })} />
-
-        <Card>
-          <Thumbnail uri={scrapImageUrl(supabase, scrap)} source={scrap.item.source} rounded />
-          <Text style={{ color: c.muted, fontSize: 13 }} selectable>
+        <View className="overflow-hidden rounded-card">
+          <Thumbnail uri={scrapImageUrl(supabase, scrap)} source={scrap.item.source} />
+        </View>
+        <View className="gap-2">
+          {categoryLabel(scrap.category, locale) ? (
+            <Text className="text-[13px] font-semibold text-accent">
+              {categoryEmoji(scrap.category)} {categoryLabel(scrap.category, locale)}
+            </Text>
+          ) : null}
+          <Title>{title}</Title>
+          <Text className="text-[13px] text-muted" selectable>
             {[scrap.item.site_name || hostnameOf(scrap.original_url), scrap.item.author_name].filter(Boolean).join(' · ')}
           </Text>
-          <Button kind="secondary" title={t('openOriginal')} onPress={() => Linking.openURL(scrap.original_url)} />
-          {processing ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-              <ActivityIndicator size="small" color={c.muted} />
-              <Body small muted>{t('summaryProcessing')}</Body>
-            </View>
-          ) : scrap.item.status === 'failed' ? (
-            <View style={{ gap: space.sm }}>
-              <Body small muted>{t('failedHint')}</Body>
-              <Button kind="secondary" title={t('retry')} onPress={retry} />
-            </View>
-          ) : null}
-          {summary ? <Body>{summary}</Body> : null}
-          {tags.length > 0 ? <Body small muted>{tags.map((tag) => `#${tag.label}`).join('  ')}</Body> : null}
-          {scrap.shared_text ? <Body small muted>{scrap.shared_text}</Body> : null}
-        </Card>
+        </View>
+        <Message text={error} />
+
+        <Button kind="secondary" icon={ExternalLink} title={t('openOriginal')} onPress={() => Linking.openURL(scrap.original_url)} />
+
+        {processing || scrap.item.status === 'failed' || summary || tags.length > 0 || scrap.shared_text ? (
+          <Card>
+            {processing ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+                <ActivityIndicator size="small" color={c.muted} />
+                <Body small muted>{t('summaryProcessing')}</Body>
+              </View>
+            ) : scrap.item.status === 'failed' ? (
+              <View style={{ gap: space.sm }}>
+                <Body small muted>{t('failedHint')}</Body>
+                <Button kind="secondary" icon={RotateCw} title={t('retry')} onPress={retry} />
+              </View>
+            ) : null}
+            {summary ? <Body>{summary}</Body> : null}
+            {tags.length > 0 ? (
+              <View className="flex-row flex-wrap gap-1.5">
+                {tags.map((tag) => (
+                  <Text key={tag.key} className="rounded-full bg-chip px-2.5 py-1 text-[12px] font-medium text-muted">
+                    #{tag.label}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+            {scrap.shared_text ? <Body small muted>{scrap.shared_text}</Body> : null}
+          </Card>
+        ) : null}
+
+        <Comments scrapId={scrap.id} comments={scrap.comments} onChange={(comments) => setScrap({ ...scrap, comments })} />
 
         <CategoryCard
           scrap={scrap}
@@ -177,13 +200,13 @@ export default function ScrapScreen() {
         />
 
         <Card>
-          <Text style={{ color: c.text, fontWeight: '700' }}>{t('visibility')}</Text>
+          <CardTitle icon={Eye}>{t('visibility')}</CardTitle>
           <VisibilityPicker value={scrap.visibility} onChange={changeVisibility} />
         </Card>
 
         <Related scrapId={scrap.id} ready={scrap.item.status === 'ready'} />
 
-        <Button kind="danger" title={t('deleteScrap')} onPress={remove} />
+        <Button kind="danger" icon={Trash2} title={t('deleteScrap')} onPress={remove} />
       </Screen>
     </>
   );
@@ -192,7 +215,6 @@ export default function ScrapScreen() {
 /** My other scraps closest in meaning; hidden when there are none (or no embeddings yet). */
 function Related({ scrapId, ready }: { scrapId: string; ready: boolean }) {
   const { t } = useI18n();
-  const c = usePalette();
   const [related, setRelated] = useState<Scrap[]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -212,7 +234,7 @@ function Related({ scrapId, ready }: { scrapId: string; ready: boolean }) {
   if (related.length === 0) return null;
   return (
     <Card>
-      <Text style={{ color: c.text, fontWeight: '700' }}>{t('related')}</Text>
+      <CardTitle icon={Sparkles}>{t('related')}</CardTitle>
       <ScrapList scraps={related} />
     </Card>
   );
@@ -229,7 +251,6 @@ function BoardsCard({
   onChange: (boardIds: string[]) => void;
 }) {
   const { t, errorText } = useI18n();
-  const c = usePalette();
   const [boards, setBoards] = useState<Pick<Board, 'id' | 'name'>[] | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -271,7 +292,7 @@ function BoardsCard({
 
   return (
     <Card>
-      <Text style={{ color: c.text, fontWeight: '700' }}>{t('addToBoard')}</Text>
+      <CardTitle icon={LayoutDashboard}>{t('addToBoard')}</CardTitle>
       {boards && boards.length > 0 ? (
         <>
           <Body small muted>{t('addToBoardHint')}</Body>
@@ -332,7 +353,7 @@ function CategoryCard({
 
   return (
     <Card>
-      <Text style={{ color: c.text, fontWeight: '700' }}>{t('category')}</Text>
+      <CardTitle icon={Tag}>{t('category')}</CardTitle>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, flexWrap: 'wrap' }}>
         <Body>
           {categoryEmoji(scrap.category)} {label}
@@ -416,7 +437,7 @@ function Comments({
 
   return (
     <Card>
-      <Text style={{ color: c.text, fontWeight: '700' }}>{t('comments')}</Text>
+      <CardTitle icon={MessageSquare}>{t('comments')}</CardTitle>
       {comments.length === 0 ? <Body small muted>{t('noComments')}</Body> : null}
       {comments.map((comment) =>
         editing?.id === comment.id ? (

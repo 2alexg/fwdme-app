@@ -8,7 +8,7 @@ import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 import { usePollWhile } from '@/lib/use-poll';
 import { Body, Button, Card, Field, Loading, Message, Screen, Title, space } from '@/ui/components';
-import { ScrapGrid } from '@/ui/scrap-grid';
+import { ScrapGrid, ViewSwitcher, useScrapView } from '@/ui/scrap-grid';
 
 const PAGE = 30;
 
@@ -22,6 +22,7 @@ export default function BoardScreen() {
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
+  const [view, setView] = useScrapView();
   const loaded = useRef(0);
 
   const load = useCallback(
@@ -94,7 +95,12 @@ export default function BoardScreen() {
       <Stack.Screen options={{ title: name }} />
       <Screen>
         {renaming === null ? (
-          <Title>{name}</Title>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+            <View style={{ flex: 1 }}>
+              <Title>{name}</Title>
+            </View>
+            <ViewSwitcher value={view} onChange={setView} />
+          </View>
         ) : (
           <Card>
             <Field value={renaming} onChangeText={setRenaming} maxLength={80} autoFocus onSubmitEditing={saveName} accessibilityLabel={t('rename')} />
@@ -105,7 +111,7 @@ export default function BoardScreen() {
           </Card>
         )}
         <Message text={error} />
-        {scraps === null ? null : scraps.length === 0 ? <Body muted>{t('boardEmpty')}</Body> : <ScrapGrid scraps={scraps} />}
+        {scraps === null ? null : scraps.length === 0 ? <Body muted>{t('boardEmpty')}</Body> : <ScrapGrid scraps={scraps} view={view} />}
         {hasMore ? <Button kind="secondary" title={t('loadMore')} onPress={() => load(scraps?.length ?? 0)} /> : null}
         {renaming === null ? (
           <View style={{ flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' }}>

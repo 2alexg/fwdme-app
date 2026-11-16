@@ -1,5 +1,5 @@
 import { boardCoverUrls, createBoard, listMyBoards, reorderBoards, type Board } from '@fwdme/core';
-import { Link, Stack, router, useFocusEffect } from 'expo-router';
+import { Link, Tabs, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useI18n } from '@/lib/i18n';
@@ -45,7 +45,7 @@ export default function BoardsScreen() {
 
   return (
     <>
-      <Stack.Screen
+      <Tabs.Screen
         options={{
           headerRight: () =>
             boards && boards.length > 1 ? (
@@ -59,7 +59,7 @@ export default function BoardsScreen() {
             ) : null,
         }}
       />
-      <Screen>
+      <Screen tabbed>
         {reordering ? null : <NewBoardForm onCreated={(id) => router.push({ pathname: '/board/[id]', params: { id } })} />}
         <Message text={error} />
         {boards === null ? null : boards.length === 0 ? (
@@ -127,26 +127,21 @@ function BoardGrid({ boards }: { boards: Board[] }) {
 }
 
 function BoardCard({ board }: { board: Board }) {
-  const c = usePalette();
   const { plural } = useI18n();
   return (
     <Link href={{ pathname: '/board/[id]', params: { id: board.id } }} asChild>
       <Pressable
-        style={({ pressed }) => ({
-          backgroundColor: c.surface,
-          borderColor: c.border,
-          borderWidth: 1,
-          borderRadius: 12,
-          overflow: 'hidden',
-          opacity: pressed ? 0.85 : 1,
-        })}
+        className="overflow-hidden rounded-card border border-border/70 bg-surface"
+        style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
       >
-        <BoardCover board={board} />
-        <View style={{ padding: space.md, gap: space.xs }}>
-          <Text numberOfLines={2} style={{ color: c.text, fontWeight: '700', fontSize: 15, textAlign: 'auto' }}>
-            {board.name}
-          </Text>
-          <Text style={{ color: c.muted, fontSize: 12 }}>{plural('boardScraps', board.scraps)}</Text>
+        <View>
+          <BoardCover board={board} />
+          <View className="gap-0.5 p-3">
+            <Text numberOfLines={2} className="text-[15px] font-bold leading-5 text-text" style={{ textAlign: 'auto' }}>
+              {board.name}
+            </Text>
+            <Text className="text-[12px] text-muted">{plural('boardScraps', board.scraps)}</Text>
+          </View>
         </View>
       </Pressable>
     </Link>

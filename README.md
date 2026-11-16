@@ -216,6 +216,22 @@ Later changes to the worker: `supabase functions deploy enrich`. Logs: dashboard
 Links that were organized without a key (`enriched_at is null`) can be re-queued with
 `update items set status = 'pending', attempts = 0, next_attempt_at = now() where enriched_at is null;`.
 
+## UI
+
+- Styling is [NativeWind](https://www.nativewind.dev) 4 (Tailwind 3 classes in `className`). Colours are
+  theme tokens: CSS variables in `apps/app/global.css` (light, and dark via `prefers-color-scheme`),
+  mapped in `tailwind.config.js` (`bg-surface`, `text-muted`, `bg-accent/10`…). `usePalette()` gives the
+  same colours as values for icons and placeholders.
+- Shared building blocks live in `src/ui/components.tsx` (Card, CardTitle, Button with icons,
+  Segmented, Chip, Field…); icons come from `lucide-react-native`.
+- Navigation is a bottom tab bar (`src/app/(tabs)`): Library, Boards, Search, Settings. A scrap or a board
+  opens on top of the tabs. The Library and Search tabs share one screen (`src/ui/library-view.tsx`).
+- The library's + button opens the "Save a link" sheet (`src/ui/add-scrap-sheet.tsx`).
+- The library, search and board pages show scraps as a grid, wide cards or a compact list
+  (`src/ui/scrap-grid.tsx`); the choice is shared by all screens and remembered on the device.
+- `darkMode: 'class'` in `tailwind.config.js` is deliberate: dark mode still follows the system through
+  the CSS variables, and the flag stops NativeWind's web runtime from throwing when its stylesheet loads late.
+
 ## Changing the schema
 
 ```sh

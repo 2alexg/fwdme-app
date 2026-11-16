@@ -14,6 +14,20 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 const step = (s) => console.log('✓', s);
+// Tabs stay mounted on web: only count cards on the screen in front.
+const shownCards = () =>
+  page.evaluate(() => [...document.querySelectorAll('a[href^="/scrap/"]')].filter((a) => a.offsetParent && !a.closest('[aria-hidden="true"],[inert]')).length);
+// The view switcher on the screen in front (hidden tabs are inert).
+const viewRadio = (name) => page.locator(`[role=radio][aria-label="${name}"]:not([inert] *)`);
+const tab = (name) => page.getByRole('tab', { name }).click();
+/** Save a link through the library's + button and sheet. */
+async function addLink(link, { comment, visibility } = {}) {
+  await page.getByRole('button', { name: 'Save a link' }).click();
+  await page.getByPlaceholder('Paste a link…').fill(link);
+  if (comment) await page.getByPlaceholder('Why are you saving it? (optional)').fill(comment);
+  if (visibility) await page.getByRole('dialog').getByRole('radio', { name: visibility }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+}
 
 // Unauthenticated visit to the library redirects to sign-in
 await page.goto(`${BASE}/`);
@@ -28,26 +42,21 @@ await inputs.nth(0).fill(email);
 await inputs.nth(1).fill(username);
 await inputs.nth(2).fill(password);
 await page.getByRole('button', { name: 'Create account' }).click();
-await page.getByPlaceholder('Paste a link…').waitFor({ timeout: 15000 });
-await page.getByText('Nothing saved yet').waitFor();
+await page.getByText('Nothing saved yet').waitFor({ timeout: 15000 });
+await page.getByRole('tab', { name: 'Library' }).waitFor();
 step('sign-up creates the account and opens an empty library');
 
 // Save a link with a comment, set public
-await page.getByPlaceholder('Paste a link…').fill('Look https://www.youtube.com/shorts/dQw4w9WgXcQ?si=xyz');
-await page.getByPlaceholder('Why are you saving it? (optional)').fill('Lemon pasta for Friday');
-await page.getByRole('radio', { name: 'Public' }).click();
-await page.getByRole('button', { name: 'Save' }).click();
+await addLink('Look https://www.youtube.com/shorts/dQw4w9WgXcQ?si=xyz', { comment: 'Lemon pasta for Friday', visibility: 'Public' });
 await page.getByText('Saved', { exact: true }).waitFor();
+await page.getByPlaceholder('Paste a link…').waitFor({ state: 'detached' }); // the sheet closes
 await page.getByText('Lemon pasta for Friday').waitFor();
 step('saving a link shows a card with the comment');
 
 // Second link, then a duplicate of the first
-await page.getByPlaceholder('Paste a link…').fill('https://example.com/article?utm_source=wa');
-await page.getByRole('button', { name: 'Save' }).click();
+await addLink('https://example.com/article?utm_source=wa');
 await page.getByText('example.com').first().waitFor();
-await page.getByPlaceholder('Paste a link…').fill('https://youtu.be/dQw4w9WgXcQ');
-await page.getByPlaceholder('Why are you saving it? (optional)').fill('Second note');
-await page.getByRole('button', { name: 'Save' }).click();
+await addLink('https://youtu.be/dQw4w9WgXcQ', { comment: 'Second note' });
 await page.getByText('Already in your library').waitFor();
 step('duplicate link is detected and the comment appended');
 
@@ -58,25 +67,46 @@ await page.locator('img[src*="/storage/v1/object/public/thumbnails/"]').first().
 step('links are organized in the background: real title and a stored preview image appear');
 
 // Invalid input
-await page.getByPlaceholder('Paste a link…').fill('lemon pasta');
-await page.getByRole('button', { name: 'Save' }).click();
+await addLink('lemon pasta');
 await page.getByText("That doesn't look like a web link.").waitFor();
-await page.getByPlaceholder('Paste a link…').fill('');
-step('non-links are rejected with a message');
+await page.getByRole('dialog').getByRole('button', { name: 'Close' }).last().click();
+await page.getByPlaceholder('Paste a link…').waitFor({ state: 'detached' });
+step('non-links are rejected with a message; the sheet closes');
 
-// Search: by the organized title and by my own comment; nothing for nonsense
+// Search tab: by the organized title and by my own comment; nothing for nonsense
+await page.getByRole('search').click();
 const search = page.getByPlaceholder('Search your library…');
+await search.waitFor();
+await page.getByText('Search by words, or by meaning').waitFor();
 await search.fill('astley');
-await page.waitForFunction(() => document.querySelectorAll('a[href^="/scrap/"]').length === 1);
-await page.getByText('Lemon pasta for Friday').waitFor();
+await page.waitForFunction(() => [...document.querySelectorAll('a[href^="/scrap/"]')].filter((a) => a.offsetParent && !a.closest('[aria-hidden="true"],[inert]')).length === 1);
+await page.getByText('Lemon pasta for Friday').first().waitFor();
 await search.fill('FRIDAY lemon');
 await page.waitForTimeout(800);
-if ((await page.locator('a[href^="/scrap/"]').count()) !== 1) throw new Error('comment search should find one scrap');
+if ((await shownCards()) !== 1) throw new Error('comment search should find one scrap');
 await search.fill('zzqx nothing');
 await page.getByText('Nothing matches your search.').waitFor();
 await page.getByRole('button', { name: 'Clear search' }).click();
-await page.waitForFunction(() => document.querySelectorAll('a[href^="/scrap/"]').length === 2);
-step('search finds scraps by title and by my comments; clearing shows everything again');
+await page.getByText('Search by words, or by meaning').waitFor();
+await tab('Library');
+await page.waitForFunction(() => [...document.querySelectorAll('a[href^="/scrap/"]')].filter((a) => a.offsetParent && !a.closest('[aria-hidden="true"],[inert]')).length === 2);
+step('search tab finds scraps by title and by my comments; the library shows everything');
+
+// View switcher: grid (default), wide cards, compact list; remembered after a reload
+for (const view of ['Cards', 'List', 'Grid']) {
+  await viewRadio(view).click();
+  const checked = await viewRadio(view).getAttribute('aria-checked');
+  if (checked !== 'true') throw new Error(`${view} view not selected`);
+  await page.getByText('Lemon pasta for Friday').first().waitFor();
+}
+await page.screenshot({ path: `${out}/library-grid.png`, fullPage: true });
+await viewRadio('List').click();
+await page.reload();
+await page.getByRole('search').waitFor();
+if ((await viewRadio('List').getAttribute('aria-checked')) !== 'true') throw new Error('view choice not remembered');
+await page.screenshot({ path: `${out}/library-list.png`, fullPage: true });
+await viewRadio('Grid').click();
+step('view switcher: grid, cards and list; the choice is remembered');
 await page.screenshot({ path: `${out}/library.png`, fullPage: true });
 
 // Detail: comments, edit, visibility
@@ -110,7 +140,8 @@ await page.getByPlaceholder('New board').fill('Weeknight dinners');
 await page.getByRole('button', { name: 'Create', exact: true }).click();
 await page.getByRole('button', { name: '✓ Weeknight dinners' }).waitFor();
 step('a new board made from a scrap has the scrap on it');
-await page.goto(`${BASE}/boards`);
+await page.goto(`${BASE}/`);
+await tab('Boards');
 await page.getByText('1 scrap', { exact: true }).waitFor();
 await page.getByPlaceholder('Name a new board').fill('Desserts');
 await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -125,7 +156,7 @@ await page.getByText('Done', { exact: true }).click();
 await page.waitForTimeout(500);
 await page.reload();
 await page.getByText('Desserts').waitFor();
-const order = await page.locator('a[href^="/board/"]').allTextContents();
+const order = await page.locator('a[href^="/board/"]:visible').allTextContents();
 if (!/^\W*Desserts/u.test(order[0] ?? '')) throw new Error(`reorder not saved: ${order.join(' | ')}`);
 await page.screenshot({ path: `${out}/boards.png`, fullPage: true });
 step('boards screen: counts, create, duplicate name refused, reorder saved');
@@ -148,15 +179,15 @@ page.on('dialog', (d) => d.accept());
 await page.goto(`${BASE}/`);
 await page.getByText('example.com').first().click();
 await page.getByRole('button', { name: 'Delete scrap' }).click();
-await page.getByPlaceholder('Paste a link…').waitFor();
+await page.getByRole('button', { name: 'Save a link' }).waitFor();
 await page.waitForTimeout(500);
 if (await page.getByText('example.com/article').count()) throw new Error('deleted scrap still listed');
-const cards = await page.locator('a[href^="/scrap/"]').count();
+const cards = await shownCards();
 if (cards !== 1) throw new Error(`expected 1 card after delete, got ${cards}`);
 step('deleting a scrap removes it from the library');
 
 // Account type change: existing scraps keep their visibility unless asked
-await page.getByText('Settings').filter({ visible: true }).click();
+await tab('Settings');
 await page.getByText(`@${username}`).waitFor();
 await page.getByRole('radio', { name: 'Public' }).filter({ visible: true }).click();
 await page.getByText("1 of your saved scraps isn't public. Make all your scraps public too?").waitFor();
@@ -164,27 +195,27 @@ await page.screenshot({ path: `${out}/settings-suggestion.png`, fullPage: true }
 await page.getByRole('button', { name: 'Keep as they are' }).click();
 await page.waitForTimeout(300);
 if (await page.getByText('Make all your scraps public too?').count()) throw new Error('suggestion not dismissed');
-await page.goto(`${BASE}/`);
-await page.getByText('🔒 Only me').waitFor();
-if (await page.getByText('🌐 Public').count()) throw new Error('existing scrap changed with the account type');
-await page.getByPlaceholder('Paste a link…').fill('https://example.org/new-after-switch');
-await page.getByRole('button', { name: 'Save' }).click();
-await page.getByText('🌐 Public').waitFor();
+await tab('Library');
+await page.getByRole('img', { name: 'Only me' }).waitFor();
+if (await page.getByRole('img', { name: 'Public' }).count()) throw new Error('existing scrap changed with the account type');
+await addLink('https://example.org/new-after-switch');
+await page.getByRole('img', { name: 'Public' }).waitFor();
+await page.getByPlaceholder('Paste a link…').waitFor({ state: 'detached' });
 step('switching to public keeps existing scraps; new scraps use the new default');
 
-await page.getByText('Settings').filter({ visible: true }).click();
+await tab('Settings');
 await page.getByText(`@${username}`).waitFor();
 await page.getByRole('radio', { name: 'Only me' }).filter({ visible: true }).click();
 await page.getByText('1 of your saved scraps is visible to others. Make all your scraps private too?').waitFor();
 await page.getByRole('button', { name: 'Make all private' }).click();
 await page.getByText('Done — 1 scrap updated.').waitFor();
 await page.goto(`${BASE}/`);
-await page.getByText('🔒 Only me').first().waitFor();
-if (await page.getByText('🌐 Public').count()) throw new Error('bulk change to private did not apply');
+await page.getByRole('img', { name: 'Only me' }).first().waitFor();
+if (await page.getByRole('img', { name: 'Public' }).count()) throw new Error('bulk change to private did not apply');
 step('accepting the suggestion moves all existing scraps to the new mode');
 
 // Settings: Hebrew flips the document to RTL
-await page.getByText('Settings').click();
+await tab('Settings');
 await page.getByText(`@${username}`).waitFor();
 await page.getByRole('radio', { name: 'עברית' }).click();
 await page.getByText('התנתקות').waitFor();
@@ -192,7 +223,11 @@ const dir = await page.evaluate(() => document.documentElement.dir);
 if (dir !== 'rtl') throw new Error(`expected rtl, got ${dir}`);
 await page.screenshot({ path: `${out}/settings-he.png`, fullPage: true });
 await page.goto(`${BASE}/`);
+await page.getByRole('tab', { name: 'הספרייה' }).waitFor();
+await page.getByRole('button', { name: 'שמירת קישור' }).click();
 await page.getByPlaceholder('הדביקו קישור…').waitFor();
+await page.screenshot({ path: `${out}/add-sheet-he.png`, fullPage: true });
+await page.getByRole('dialog').getByRole('button', { name: 'סגירה' }).last().click();
 await page.screenshot({ path: `${out}/library-he.png`, fullPage: true });
 step('switching to Hebrew translates the UI and sets dir=rtl');
 
@@ -218,10 +253,12 @@ if (overflow > 1) throw new Error(`horizontal overflow ${overflow}px at phone wi
 step('phone width has no horizontal scroll');
 
 await browser.close();
-// The deliberate wrong-password attempt logs one 400 from the auth API.
+// Deliberate failures log one 400 (wrong password) and one 409 (duplicate board name).
 const relevant = errors.filter((e) => !/favicon|Download the React DevTools/.test(e));
-const badRequests = relevant.filter((e) => e.includes('status of 400'));
-if (badRequests.length === 1) relevant.splice(relevant.indexOf(badRequests[0]), 1);
+for (const status of ['status of 400', 'status of 409']) {
+  const expected = relevant.filter((e) => e.includes(status));
+  if (expected.length === 1) relevant.splice(relevant.indexOf(expected[0]), 1);
+}
 if (relevant.length) {
   console.log('Console errors:\n' + relevant.join('\n'));
   process.exit(1);
