@@ -242,6 +242,20 @@ worker isn't served). The e2e run needs the worker served.
 - Email confirmation links redirect to `fwdme://` (allowed under Supabase → Authentication → URL
   Configuration); the app signs the user in from the tokens in that link.
 
+### Beta and store releases
+
+- **Android → Google Play internal testing:**
+  `cd apps/app && npx eas-cli@latest build -p android --profile production --auto-submit`.
+  The production profile builds an `.aab`, the only format Play accepts. Submitting needs a Google
+  Play service account key, uploaded once in the Expo dashboard (Credentials) or with
+  `eas credentials -p android`. Uploads land on the internal track as a **draft** (Play only accepts
+  drafts until the app has been published once); roll it out to testers in Play Console.
+- **iOS → TestFlight:** `npx eas-cli@latest build -p ios --profile production --auto-submit`.
+- Versions: `appVersionSource: remote` with `autoIncrement`, so EAS raises the build number every time.
+- **Store graphics:** `store/feature-graphic.html` + `scripts/make-store-graphics.mjs` write the
+  Play feature graphic (English and Hebrew, 1024×500) and the 512px icon to `store/out/`. The
+  command is at the top of the script.
+
 ### Deploying the worker to the cloud
 
 One-time setup (CLI logged in with `supabase login`):
