@@ -212,6 +212,16 @@ worker isn't served). The e2e run needs the worker served.
   Table Editor → `feedback`. `user_id` matches the user id on Sentry crash reports. Deleted with
   the account.
 
+## How it works (milestone 5): public pages for the stores
+
+- `/privacy` (privacy policy) and `/delete-account` (how to delete an account, with or without the app)
+  are routes in the app, open to everyone, in Hebrew and English. Their text lives in
+  `src/lib/legal.ts`, along with the contact email and publisher name. Keep it in step with what
+  the app collects. Settings and sign-up link to the policy.
+- The web app is hosted on EAS Hosting. `pnpm --filter app deploy:web` builds it against the cloud
+  Supabase project (values from `eas.json`), then deploys a preview; add `-- --prod` for production.
+  The App Store and Google Play link to `https://<domain>.expo.app/privacy` and `/delete-account`.
+
 ## Phone builds (EAS) and the cloud database
 
 - Expo project: `@fwdme4s-team/fwdme`. Build profiles are in `apps/app/eas.json`; the cloud Supabase
