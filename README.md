@@ -70,7 +70,8 @@ worker isn't served). The e2e run needs the worker served.
   (or returns the existing one with `already_saved`), and appends the optional comment. The share
   extensions in milestone 2 will call the same function.
 - **Languages:** Hebrew (default) and English, chosen at sign-up and in Settings. On web the
-  document switches to `dir="rtl"`. Native RTL comes with the Hebrew/RTL polish milestone.
+  document switches to `dir="rtl"`. On iOS and Android the app switches React Native's layout
+  direction and reloads once when the language changes (`src/lib/direction.ts`).
 
 ## How it works (milestone 3): organizing links
 
