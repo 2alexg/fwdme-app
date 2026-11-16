@@ -7,6 +7,7 @@ import {
   addComment,
   addScrapToBoard,
   createShareToken,
+  deleteMyAccount,
   revokeShareToken,
   createBoard,
   deleteBoard,
@@ -251,6 +252,24 @@ describe.skipIf(!reachable)('api against local supabase', () => {
     await revokeShareToken(bob, token); // someone else's: no effect, no error
     await revokeShareToken(alice, token);
     await expect(createShareToken(anon)).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it.skipIf(!workerUp)('deletes an account and everything in it', async () => {
+    const carol = client();
+    const email = `carol_${run}@test.local`;
+    await signUp(carol, { email, password, username: `carol_${run}`, locale: 'en' });
+    await saveScrap(carol, { input: `https://example.com/only-carol-${run}` });
+    await saveScrap(carol, { input: `https://example.com/carol-and-bob-${run}` });
+    const bobs = await saveScrap(bob, { input: `https://example.com/carol-and-bob-${run}` });
+    await createBoard(carol, 'Carol board');
+
+    await expect(deleteMyAccount(anon)).rejects.toBeInstanceOf(ApiError);
+    await deleteMyAccount(carol);
+
+    expect((await carol.auth.getSession()).data.session).toBeNull();
+    await expect(signIn(client(), email, password)).rejects.toBeInstanceOf(ApiError);
+    expect(await usernameAvailable(anon, `carol_${run}`)).toBe(true);
+    expect(await getScrap(bob, bobs.scrapId)).not.toBeNull();
   });
 
   it('refuses saves without a session or a link', async () => {

@@ -436,3 +436,7 @@ verify_jwt = false
 # The iOS share extension has no session; it authenticates with a share token.
 [functions.share]
 verify_jwt = false
+
+# Checks the caller's session itself (works with the new publishable keys).
+[functions.delete-account]
+verify_jwt = false

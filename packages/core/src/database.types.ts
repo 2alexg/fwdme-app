@@ -274,6 +274,9 @@ isOneToOne: false
             "create_share_token":
 { Args: { "p_label"?: string }; Returns: string
                            },
+"delete_orphan_items":
+{ Args: { "p_item_ids": (string)[] }; Returns: (string)[]
+                           },
 "match_my_scraps":
 { Args: { "p_category"?: string,"p_embedding": string,"p_limit"?: number,"p_min_similarity"?: number }; Returns: {
               "scrap_id": string,"similarity": number

@@ -139,6 +139,17 @@ export async function signOut(db: Db) {
   if (error) throw new ApiError(error.message);
 }
 
+/**
+ * Deletes my account and everything in it (the delete-account Edge Function),
+ * then signs out on this device. Can't be undone.
+ */
+export async function deleteMyAccount(db: Db) {
+  const { error } = await db.functions.invoke('delete-account', { body: {} });
+  if (error) throw new ApiError(error.message, 'delete_account_failed');
+  // The session no longer exists on the server; just forget it here.
+  await db.auth.signOut({ scope: 'local' });
+}
+
 // ---------------------------------------------------------------------------
 // Share tokens (the iOS share sheet saves with one; see the share_tokens migration)
 // ---------------------------------------------------------------------------
