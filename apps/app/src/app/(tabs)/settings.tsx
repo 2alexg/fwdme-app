@@ -11,6 +11,7 @@ import {
   type Visibility,
 } from '@fwdme/core';
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { sendTestCrashReport } from '@/lib/crash';
@@ -224,6 +225,8 @@ export default function SettingsScreen() {
           <Button kind="danger" title={t('deleteAccount')} onPress={() => setDeleting({ typed: '', busy: false })} />
         )}
       </Card>
+
+      <Button kind="link" title={t('privacyPolicy')} onPress={() => router.push('/privacy')} />
 
       {/* Long-press: send a test crash report (checks the setup in a real build). */}
       <Pressable

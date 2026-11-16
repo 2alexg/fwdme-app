@@ -91,6 +91,9 @@ export default function SignUpScreen() {
       <Link href="/sign-in" style={{ textAlign: 'center' }}>
         <Text style={{ color: c.accent, fontWeight: '600' }}>{t('haveAccount')}</Text>
       </Link>
+      <Link href="/privacy" style={{ textAlign: 'center' }}>
+        <Text style={{ color: c.muted, fontSize: 13 }}>{t('signUpPrivacy')}</Text>
+      </Link>
     </Screen>
   );
 }

@@ -66,6 +66,9 @@ function Routes() {
           <Stack.Screen name="board/[id]" options={{ title: '' }} />
           <Stack.Screen name="share" options={{ headerShown: false, gestureEnabled: false }} />
         </Stack.Protected>
+        {/* Public pages (the stores link to them), signed in or not. */}
+        <Stack.Screen name="privacy" />
+        <Stack.Screen name="delete-account" />
         <Stack.Protected guard={!signedIn} redirectTo="/">
           <Stack.Screen name="sign-in" options={{ title: t('signIn'), headerShown: false }} />
           <Stack.Screen name="sign-up" options={{ title: t('signUp'), headerShown: false }} />
