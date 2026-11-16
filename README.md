@@ -3,7 +3,7 @@
 Save anything from any app in one tap, have it organized automatically, and optionally share it.
 Design doc: [Scrapbook App — Product & Technical Design](https://claude.ai/artifact/1eAUAC2aFVSCbnMZ7DZuPM).
 
-**Status:** milestone 4 of 5 — boards, keyword search, search by meaning and link merging are live; the iOS share sheet is being tested.
+**Status:** milestone 5 of 5 — getting ready for the beta (account deletion first); the iOS share sheet is being tested.
 Sharing works on Android; on iOS through a native share extension (TestFlight).
 
 ## Layout
@@ -174,6 +174,17 @@ worker isn't served). The e2e run needs the worker served.
   same code as the app (`shareToSave`, `normalizeLink`) and calls `share_save()` /
   `share_add_comment()` / `share_set_visibility()`. Those are service-role only and run the
   regular paths as the token's user, so row-level security and `save_scrap()`'s checks apply.
+
+## How it works (milestone 5): deleting your account
+
+- **Settings → Delete account** (iOS, Android and web; the App Store and Google Play both require
+  it). You type your username to confirm.
+- The app calls the `delete-account` Edge Function, which deletes the auth user. Foreign keys
+  cascade to everything the person owns: profile, scraps, comments, boards, follows, share tokens.
+- Pages (`items`) are shared between users, so only the ones nobody else saved are removed
+  (`delete_orphan_items()`, service-role only), along with their thumbnails in Storage.
+- Google Play also asks for a web link where people can request deletion without the app; that
+  comes with the store paperwork.
 
 ## Phone builds (EAS) and the cloud database
 

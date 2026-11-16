@@ -132,6 +132,12 @@ const en = {
   err_empty_board_name: 'Give the board a name.',
   err_board_name_too_long: 'Board names can be up to 80 characters.',
   err_link_expired: 'This email link has expired or was already used. Sign in with your email and password.',
+  // delete account
+  deleteAccount: 'Delete account',
+  deleteAccountNote: 'Deletes your account with all your scraps, comments and boards. This can’t be undone.',
+  deleteAccountType: 'Type your username to confirm',
+  deleteAccountForever: 'Delete my account',
+  err_delete_account_failed: 'Couldn’t delete your account. Check your connection and try again.',
 };
 
 export type StringKey = keyof typeof en;
@@ -257,6 +263,11 @@ const he: Record<StringKey, string> = {
   err_empty_board_name: 'תנו ללוח שם.',
   err_board_name_too_long: 'שם לוח יכול להיות עד 80 תווים.',
   err_link_expired: 'הקישור באימייל פג תוקף או שכבר נעשה בו שימוש. התחברו עם האימייל והסיסמה.',
+  deleteAccount: 'מחיקת החשבון',
+  deleteAccountNote: 'החשבון יימחק יחד עם כל הפריטים, ההערות והלוחות שלך. אי אפשר לבטל את זה.',
+  deleteAccountType: 'כדי לאשר, הקלידו את שם המשתמש',
+  deleteAccountForever: 'מחיקת החשבון שלי',
+  err_delete_account_failed: 'לא הצלחנו למחוק את החשבון. בדקו את החיבור ונסו שוב.',
 };
 
 const dictionaries: Record<Locale, Record<StringKey, string>> = { en, he };
@@ -338,6 +349,7 @@ export function I18nProvider({ locale: preferred, children }: { locale?: Locale;
         invalid_credentials: 'err_invalid_credentials',
         user_already_exists: 'err_email_taken',
         'invalid url': 'err_invalid_url',
+        delete_account_failed: 'err_delete_account_failed',
       };
       const key = known[message] ?? (code ? known[code] : undefined);
       return key ? t(key) : t('err_generic');

@@ -1,5 +1,6 @@
 import {
   countScrapsNotIn,
+  deleteMyAccount,
   defaultVisibility,
   setAllScrapsVisibility,
   signOut,
@@ -12,10 +13,10 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
-import { Languages, LogOut, ShieldCheck, UserRound } from 'lucide-react-native';
+import { Languages, LogOut, ShieldCheck, Trash2, UserRound } from 'lucide-react-native';
 import { forgetShareToken } from '@/lib/share-token';
 import { supabase } from '@/lib/supabase';
-import { Body, Button, Card, CardTitle, Loading, Message, Screen, Segmented, space, usePalette } from '@/ui/components';
+import { Body, Button, Card, CardTitle, Field, Loading, Message, Screen, Segmented, space, usePalette } from '@/ui/components';
 
 export default function SettingsScreen() {
   const { profile, setProfile } = useSession();
@@ -27,6 +28,8 @@ export default function SettingsScreen() {
   // Offered after the account type changes; existing scraps only change if accepted.
   const [suggestion, setSuggestion] = useState<{ target: Visibility; count: number } | null>(null);
   const [applying, setApplying] = useState(false);
+  // Delete account: opened, then the username typed to confirm.
+  const [deleting, setDeleting] = useState<{ typed: string; busy: boolean } | null>(null);
 
   if (!profile) return <Loading />;
 
@@ -68,6 +71,23 @@ export default function SettingsScreen() {
       setError(errorText(e));
     } finally {
       setApplying(false);
+    }
+  }
+
+  const usernameTyped =
+    !!deleting && deleting.typed.trim().replace(/^@/, '').toLowerCase() === profile.username.toLowerCase();
+
+  async function deleteAccount() {
+    if (!usernameTyped) return;
+    setDeleting((d) => d && { ...d, busy: true });
+    setError(null);
+    try {
+      await deleteMyAccount(supabase);
+      // The token is already gone with the account; this clears it from the device.
+      await forgetShareToken();
+    } catch (e) {
+      setError(errorText(e));
+      setDeleting((d) => d && { ...d, busy: false });
     }
   }
 
@@ -123,6 +143,37 @@ export default function SettingsScreen() {
       <Message text={error} />
       <Message text={!notice ? null : 'bulkDone' in notice ? plural('bulkDone', notice.bulkDone) : t('changesSaved')} tone="success" />
       <Button kind="secondary" icon={LogOut} title={t('signOut')} onPress={() => forgetShareToken().then(() => signOut(supabase)).catch((e) => setError(errorText(e)))} />
+
+      <Card>
+        <CardTitle icon={Trash2}>{t('deleteAccount')}</CardTitle>
+        <Body small muted>{t('deleteAccountNote')}</Body>
+        {deleting ? (
+          <>
+            <Field
+              label={t('deleteAccountType')}
+              placeholder={profile.username}
+              value={deleting.typed}
+              onChangeText={(typed) => setDeleting({ ...deleting, typed })}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!deleting.busy}
+            />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+              <Button
+                kind="danger"
+                icon={Trash2}
+                title={t('deleteAccountForever')}
+                onPress={deleteAccount}
+                disabled={!usernameTyped}
+                busy={deleting.busy}
+              />
+              <Button kind="secondary" title={t('cancel')} onPress={() => setDeleting(null)} disabled={deleting.busy} />
+            </View>
+          </>
+        ) : (
+          <Button kind="danger" title={t('deleteAccount')} onPress={() => setDeleting({ typed: '', busy: false })} />
+        )}
+      </Card>
     </Screen>
   );
 }
