@@ -7,6 +7,7 @@ import { ExternalLink, Globe, Lock, LogOut, Send, Users, type LucideIcon } from 
 import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  I18nManager,
   Platform,
   Image,
   Pressable,
@@ -65,6 +66,31 @@ export function useIconFlip(Icon?: LucideIcon) {
 }
 
 /**
+ * textAlign for a physical side of the screen. In a right-to-left layout, iOS
+ * and Android swap 'left' and 'right' (doLeftAndRightSwapInRTL); the web
+ * doesn't, so this undoes the swap on phones.
+ */
+export function alignTo(side: 'left' | 'right'): 'left' | 'right' {
+  const swapped = Platform.OS !== 'web' && I18nManager.isRTL && I18nManager.doLeftAndRightSwapInRTL;
+  return swapped ? (side === 'left' ? 'right' : 'left') : side;
+}
+
+/**
+ * Fixed text direction for a whole paragraph in one language, whatever its
+ * first letter. Android picks a paragraph's direction from its first strong
+ * letter (a Hebrew sentence starting with "Fwd:Me" would come out left to
+ * right), so Hebrew text starts with an invisible right-to-left mark.
+ */
+export function directed(text: string, lang: 'he' | 'en') {
+  return lang === 'he' ? `\u200F${text}` : text;
+}
+export function directionStyle(lang: 'he' | 'en'): TextStyle {
+  return lang === 'he'
+    ? { textAlign: alignTo('right'), writingDirection: 'rtl' }
+    : { textAlign: alignTo('left'), writingDirection: 'ltr' };
+}
+
+/**
  * Text direction for an input on web. An empty input shows its placeholder in
  * the app's direction; typed text finds its own (Hebrew or English).
  * Inputs for Latin-only content (email, links, usernames) are left to right
@@ -72,7 +98,7 @@ export function useIconFlip(Icon?: LucideIcon) {
  */
 export function useInputDirection(value: string | undefined, ltr?: boolean): TextStyle {
   const { isRTL } = useI18n();
-  if (ltr && value) return { textAlign: 'left', writingDirection: 'ltr' };
+  if (ltr && value) return { textAlign: alignTo('left'), writingDirection: 'ltr' };
   if (Platform.OS !== 'web') return {};
   return { textAlign: isRTL ? 'right' : 'left', writingDirection: value ? undefined : isRTL ? 'rtl' : 'ltr' };
 }
