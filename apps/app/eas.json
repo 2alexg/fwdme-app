@@ -11,8 +11,7 @@
         "EXPO_PUBLIC_SENTRY_DSN": "https://567f7d738ebd2cce04a327b9bfcad1c5@o4512440542822400.ingest.de.sentry.io/4512442589773904",
         "SENTRY_ORG": "fwdme",
         "SENTRY_PROJECT": "fwdme-app",
-        "SENTRY_URL": "https://de.sentry.io/",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "SENTRY_URL": "https://de.sentry.io/"
       }
     },
     "development": {
