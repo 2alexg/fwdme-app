@@ -199,8 +199,8 @@ worker isn't served). The e2e run needs the worker served.
   account id (a random uuid) but no email, username, IP address or device name. There is no screen
   recording and no performance tracing, and query strings (search words) are stripped from request
   breadcrumbs.
-- Sentry org `fwdme`, project `fwdme-app`, EU (Germany) region; the DSN, org, project and
-  `SENTRY_URL` are in `eas.json`. Source maps and debug symbols upload during EAS builds with the
+- Sentry org `fwdme`, project `fwdme-app`, EU (Germany) region; the DSN, org and project are in
+  `eas.json` (the upload address comes from the auth token). Source maps and debug symbols upload during EAS builds with the
   `SENTRY_AUTH_TOKEN` EAS environment variable (secret, in preview and production). If the token is
   ever revoked, builds fail at the upload step: set `SENTRY_DISABLE_AUTO_UPLOAD=true` to build anyway.
 - Check a build: in Settings, long-press the version line at the bottom. It sends a test report.
