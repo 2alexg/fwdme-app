@@ -13,14 +13,14 @@ import {
 } from '@fwdme/core';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Search, X } from 'lucide-react-native';
 import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 import { usePollWhile } from '@/lib/use-poll';
 import { AddScrapButton } from '@/ui/add-scrap-sheet';
-import { Body, Button, Chip, Message, Screen, space, usePalette } from '@/ui/components';
+import { Body, Button, Chip, Message, Screen, space, useInputDirection, usePalette } from '@/ui/components';
 import { ScrapGrid, ViewSwitcher, useScrapView } from '@/ui/scrap-grid';
 
 const PAGE = 30;
@@ -212,8 +212,9 @@ function SearchLink() {
 }
 
 function SearchField({ value, onChange, autoFocus }: { value: string; onChange: (text: string) => void; autoFocus?: boolean }) {
-  const { t, isRTL } = useI18n();
+  const { t } = useI18n();
   const c = usePalette();
+  const direction = useInputDirection(value);
   return (
     <View className="min-h-[48px] flex-row items-center gap-2 rounded-xl border border-border/70 bg-surface px-3.5">
       <Search size={18} color={c.muted} strokeWidth={2.2} />
@@ -228,7 +229,7 @@ function SearchField({ value, onChange, autoFocus }: { value: string; onChange: 
         returnKeyType="search"
         inputMode="search"
         className="flex-1 py-3 text-[15px] text-text"
-        style={{ textAlign: Platform.OS === 'web' ? (isRTL ? 'right' : 'left') : undefined }}
+        style={direction}
       />
       {value ? (
         <Pressable

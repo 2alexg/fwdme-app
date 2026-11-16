@@ -153,6 +153,8 @@ const en = {
 export type StringKey = keyof typeof en;
 type PluralBase = StringKey extends infer K ? (K extends `${infer B}_one` ? B : never) : never;
 
+// Ranges like 3–30 are wrapped in \u2066…\u2069 (left-to-right isolate) so
+// they don't come out reversed (30–3) inside Hebrew text.
 const he: Record<StringKey, string> = {
   appName: 'Fwd:Me',
   signIn: 'התחברות',
@@ -161,7 +163,7 @@ const he: Record<StringKey, string> = {
   email: 'אימייל',
   password: 'סיסמה',
   username: 'שם משתמש',
-  usernameHint: '3–30 תווים: a–z, 0–9 או _. תמיד ציבורי.',
+  usernameHint: '\u20663–30\u2069 תווים: \u2066a–z\u2069, \u20660–9\u2069 או _. תמיד ציבורי.',
   passwordHint: 'לפחות 8 תווים.',
   noAccount: 'חדשים כאן? יצירת חשבון',
   haveAccount: 'כבר יש לך חשבון? התחברות',
@@ -263,7 +265,7 @@ const he: Record<StringKey, string> = {
   close: 'סגירה',
   err_generic: 'משהו השתבש. נסו שוב.',
   err_invalid_url: 'זה לא נראה כמו קישור.',
-  err_invalid_username: 'שם משתמש: 3–30 תווים, a–z, 0–9 או _.',
+  err_invalid_username: 'שם משתמש: \u20663–30\u2069 תווים, \u2066a–z\u2069, \u20660–9\u2069 או _.',
   err_username_taken: 'שם המשתמש תפוס.',
   err_weak_password: 'לפחות 8 תווים.',
   err_invalid_credentials: 'אימייל או סיסמה שגויים.',

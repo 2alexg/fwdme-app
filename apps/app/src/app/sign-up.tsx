@@ -59,6 +59,7 @@ export default function SignUpScreen() {
           onChangeText={setEmail}
           autoCapitalize="none"
           autoComplete="email"
+          ltr
           keyboardType="email-address"
           inputMode="email"
         />
@@ -70,6 +71,7 @@ export default function SignUpScreen() {
           autoCapitalize="none"
           autoCorrect={false}
           autoComplete="username-new"
+          ltr
           maxLength={30}
         />
         <Field
@@ -79,6 +81,7 @@ export default function SignUpScreen() {
           onChangeText={setPassword}
           secureTextEntry
           autoComplete="new-password"
+          ltr
           onSubmitEditing={() => valid && submit()}
         />
         <Message text={error} />
