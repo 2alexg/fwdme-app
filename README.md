@@ -186,6 +186,19 @@ worker isn't served). The e2e run needs the worker served.
 - Google Play also asks for a web link where people can request deletion without the app; that
   comes with the store paperwork.
 
+## How it works (milestone 5): crash reporting
+
+- Sentry (`@sentry/react-native`) on iOS and Android, in `src/lib/crash.ts`. It is off in
+  development, on web, and in any build without `EXPO_PUBLIC_SENTRY_DSN` (set in `eas.json`).
+- It catches native crashes, JavaScript errors and unhandled promise rejections. Reports carry the
+  account id (a random uuid) but no email, username, IP address or device name. There is no screen
+  recording and no performance tracing, and query strings (search words) are stripped from request
+  breadcrumbs.
+- Source maps and debug symbols upload during EAS builds when the `SENTRY_AUTH_TOKEN` EAS
+  environment variable (secret) is set and `SENTRY_ORG` / `SENTRY_PROJECT` are in `eas.json`.
+  Until then `SENTRY_DISABLE_AUTO_UPLOAD=true` keeps builds from failing.
+- Check a build: in Settings, long-press the version line at the bottom. It sends a test report.
+
 ## Phone builds (EAS) and the cloud database
 
 - Expo project: `@fwdme4s-team/fwdme`. Build profiles are in `apps/app/eas.json`; the cloud Supabase

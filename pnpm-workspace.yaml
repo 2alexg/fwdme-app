@@ -5,3 +5,7 @@ packages:
 
 # Expo + React Native libraries are most reliable with a flat node_modules.
 nodeLinker: hoisted
+
+# Sentry's CLI downloads its binary on install (source map upload in EAS builds).
+allowBuilds:
+  '@sentry/cli': true

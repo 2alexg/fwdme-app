@@ -67,7 +67,8 @@
           }
         }
       ],
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      "@sentry/react-native/expo"
     ],
     "scheme": "fwdme",
     "experiments": {

@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { getMyProfile, type Profile } from '@fwdme/core';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { setCrashUser } from '@/lib/crash';
 import { syncShareToken } from './share-token';
 import { supabase } from './supabase';
 
@@ -50,6 +51,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!loading) syncShareToken(userId, locale);
   }, [loading, userId, locale]);
+
+  useEffect(() => setCrashUser(userId), [userId]);
 
   return (
     <SessionContext.Provider value={{ session, profile, loading, refreshProfile, setProfile }}>

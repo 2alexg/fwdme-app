@@ -9,8 +9,10 @@ import {
   type Locale,
   type Visibility,
 } from '@fwdme/core';
+import Constants from 'expo-constants';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { sendTestCrashReport } from '@/lib/crash';
 import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { Languages, LogOut, ShieldCheck, Trash2, UserRound } from 'lucide-react-native';
@@ -24,7 +26,7 @@ export default function SettingsScreen() {
   const c = usePalette();
   const [error, setError] = useState<string | null>(null);
   // Kept as data, not text, so it follows a language switch.
-  const [notice, setNotice] = useState<{ saved: true } | { bulkDone: number } | null>(null);
+  const [notice, setNotice] = useState<{ saved: true } | { bulkDone: number } | { testReport: true } | null>(null);
   // Offered after the account type changes; existing scraps only change if accepted.
   const [suggestion, setSuggestion] = useState<{ target: Visibility; count: number } | null>(null);
   const [applying, setApplying] = useState(false);
@@ -141,7 +143,7 @@ export default function SettingsScreen() {
       </Card>
 
       <Message text={error} />
-      <Message text={!notice ? null : 'bulkDone' in notice ? plural('bulkDone', notice.bulkDone) : t('changesSaved')} tone="success" />
+      <Message text={!notice ? null : 'bulkDone' in notice ? plural('bulkDone', notice.bulkDone) : 'testReport' in notice ? t('testReportSent') : t('changesSaved')} tone="success" />
       <Button kind="secondary" icon={LogOut} title={t('signOut')} onPress={() => forgetShareToken().then(() => signOut(supabase)).catch((e) => setError(errorText(e)))} />
 
       <Card>
@@ -174,6 +176,17 @@ export default function SettingsScreen() {
           <Button kind="danger" title={t('deleteAccount')} onPress={() => setDeleting({ typed: '', busy: false })} />
         )}
       </Card>
+
+      {/* Long-press: send a test crash report (checks the setup in a real build). */}
+      <Pressable
+        onLongPress={() => {
+          if (sendTestCrashReport()) setNotice({ testReport: true });
+        }}
+        delayLongPress={1500}
+        style={{ alignSelf: 'center', padding: space.sm }}
+      >
+        <Body small muted>{t('version').replace('{v}', Constants.expoConfig?.version ?? '')}</Body>
+      </Pressable>
     </Screen>
   );
 }
