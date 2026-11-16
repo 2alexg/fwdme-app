@@ -2,6 +2,8 @@ import { ApiError, InvalidUrlError, type Locale } from '@fwdme/core';
 import { getLocales } from 'expo-localization';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
+import { applyDirection } from '@/lib/direction';
+import { authStorage } from '@/lib/storage';
 
 const en = {
   appName: 'Fwd:Me',
@@ -259,6 +261,18 @@ const he: Record<StringKey, string> = {
 
 const dictionaries: Record<Locale, Record<StringKey, string>> = { en, he };
 
+const LOCALE_KEY = 'fwdme.locale';
+
+/** The language used last time, so the app starts in it (and in its direction). */
+function lastLocale(): Locale | null {
+  try {
+    const stored = authStorage.getItem(LOCALE_KEY);
+    return stored === 'en' || stored === 'he' ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
 export function deviceLocale(): Locale {
   const tag = getLocales()[0]?.languageCode;
   return tag === 'en' ? 'en' : 'he';
@@ -278,7 +292,7 @@ interface I18nState {
 const I18nContext = createContext<I18nState | null>(null);
 
 export function I18nProvider({ locale: preferred, children }: { locale?: Locale; children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>(preferred ?? deviceLocale());
+  const [locale, setLocale] = useState<Locale>(() => preferred ?? lastLocale() ?? deviceLocale());
 
   // The profile's language wins whenever it loads or changes.
   const [lastPreferred, setLastPreferred] = useState(preferred);
@@ -289,13 +303,19 @@ export function I18nProvider({ locale: preferred, children }: { locale?: Locale;
 
   const isRTL = locale === 'he';
 
-  // Web: flip the whole document. Native RTL (I18nManager + reload) lands
-  // with the Hebrew/RTL polish milestone.
+  // Web flips the whole document; iOS/Android switch the layout direction
+  // (with one reload when it changes).
   useEffect(() => {
+    try {
+      authStorage.setItem(LOCALE_KEY, locale);
+    } catch {
+      // Not remembered; the profile still sets it after sign-in.
+    }
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.documentElement.lang = locale;
       document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
     }
+    applyDirection(isRTL);
   }, [locale, isRTL]);
 
   const value = useMemo<I18nState>(() => {

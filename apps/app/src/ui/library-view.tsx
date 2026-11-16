@@ -13,7 +13,7 @@ import {
 } from '@fwdme/core';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Search, X } from 'lucide-react-native';
 import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
@@ -228,7 +228,7 @@ function SearchField({ value, onChange, autoFocus }: { value: string; onChange: 
         returnKeyType="search"
         inputMode="search"
         className="flex-1 py-3 text-[15px] text-text"
-        style={{ textAlign: isRTL ? 'right' : 'left' }}
+        style={{ textAlign: Platform.OS === 'web' ? (isRTL ? 'right' : 'left') : undefined }}
       />
       {value ? (
         <Pressable

@@ -22,7 +22,8 @@ export default function SettingsScreen() {
   const { t, plural, errorText } = useI18n();
   const c = usePalette();
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  // Kept as data, not text, so it follows a language switch.
+  const [notice, setNotice] = useState<{ saved: true } | { bulkDone: number } | null>(null);
   // Offered after the account type changes; existing scraps only change if accepted.
   const [suggestion, setSuggestion] = useState<{ target: Visibility; count: number } | null>(null);
   const [applying, setApplying] = useState(false);
@@ -34,7 +35,7 @@ export default function SettingsScreen() {
     setNotice(null);
     try {
       setProfile(await updateMyProfile(supabase, profile!.id, patch));
-      setNotice(t('changesSaved'));
+      setNotice({ saved: true });
       return true;
     } catch (e) {
       setError(errorText(e));
@@ -62,7 +63,7 @@ export default function SettingsScreen() {
     try {
       const changed = await setAllScrapsVisibility(supabase, suggestion.target);
       setSuggestion(null);
-      setNotice(plural('bulkDone', changed));
+      setNotice({ bulkDone: changed });
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -120,7 +121,7 @@ export default function SettingsScreen() {
       </Card>
 
       <Message text={error} />
-      <Message text={notice} tone="success" />
+      <Message text={!notice ? null : 'bulkDone' in notice ? plural('bulkDone', notice.bulkDone) : t('changesSaved')} tone="success" />
       <Button kind="secondary" icon={LogOut} title={t('signOut')} onPress={() => forgetShareToken().then(() => signOut(supabase)).catch((e) => setError(errorText(e)))} />
     </Screen>
   );
