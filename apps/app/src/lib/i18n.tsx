@@ -138,6 +138,8 @@ const en = {
   deleteAccountType: 'Type your username to confirm',
   deleteAccountForever: 'Delete my account',
   err_delete_account_failed: 'Couldn’t delete your account. Check your connection and try again.',
+  version: 'Version {v}',
+  testReportSent: 'Test report sent.',
 };
 
 export type StringKey = keyof typeof en;
@@ -268,6 +270,8 @@ const he: Record<StringKey, string> = {
   deleteAccountType: 'כדי לאשר, הקלידו את שם המשתמש',
   deleteAccountForever: 'מחיקת החשבון שלי',
   err_delete_account_failed: 'לא הצלחנו למחוק את החשבון. בדקו את החיבור ונסו שוב.',
+  version: 'גרסה {v}',
+  testReportSent: 'דוח בדיקה נשלח.',
 };
 
 const dictionaries: Record<Locale, Record<StringKey, string>> = { en, he };

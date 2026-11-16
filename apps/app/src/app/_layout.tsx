@@ -3,6 +3,7 @@ import { Stack, router, usePathname } from 'expo-router';
 import { useCallback, useEffect } from 'react';
 import { Alert, Platform } from 'react-native';
 import { useAuthLinks } from '@/lib/auth-links';
+import { withCrashReporting } from '@/lib/crash';
 import { StatusBar } from 'expo-status-bar';
 import { I18nProvider, useI18n } from '@/lib/i18n';
 import { PendingShareProvider, usePendingShare } from '@/lib/pending-share';
@@ -13,7 +14,9 @@ import { Loading, usePalette } from '@/ui/components';
 // "Open in Fwd:Me"), so there's always a way back to it.
 export const unstable_settings = { anchor: '(tabs)' };
 
-export default function RootLayout() {
+export default withCrashReporting(RootLayout);
+
+function RootLayout() {
   return (
     <SessionProvider>
       <PendingShareProvider>
