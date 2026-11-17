@@ -3,7 +3,7 @@
 // light/dark setting. usePalette() gives the same colours as plain values for
 // the few places that need them outside className (icons, placeholders).
 import type { Visibility } from '@fwdme/core';
-import { ExternalLink, Globe, Lock, LogOut, Send, Users, type LucideIcon } from 'lucide-react-native';
+import { Check, ExternalLink, Globe, Lock, LogOut, Send, Users, type LucideIcon } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -252,8 +252,8 @@ export function Button({
       accessibilityRole="button"
       onPress={onPress}
       disabled={off}
-      className={`min-h-[48px] flex-row items-center justify-center gap-2 rounded-xl px-4 ${kind === 'link' ? 'py-2' : 'py-3'} ${BUTTON[kind].box}`}
-      style={({ pressed }) => ({ opacity: off ? 0.45 : pressed ? 0.75 : 1 })}
+      // Dimming goes in className: NativeWind drops a style function's opacity here.
+      className={`min-h-[48px] flex-row items-center justify-center gap-2 rounded-xl px-4 ${kind === 'link' ? 'py-2' : 'py-3'} ${BUTTON[kind].box} ${off ? 'opacity-[0.45]' : 'active:opacity-75'}`}
     >
       {busy ? (
         <ActivityIndicator color={fg} />
@@ -277,6 +277,27 @@ export function Message({ text, tone = 'error' }: { text: string | null; tone?: 
     >
       {text}
     </Text>
+  );
+}
+
+/** A tick box with its label; the whole row is the touch target. */
+export function Checkbox({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode }) {
+  const c = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      onPress={() => onChange(!checked)}
+      className="flex-row items-start gap-3 py-1"
+      hitSlop={6}
+    >
+      <View
+        className={`mt-0.5 h-6 w-6 items-center justify-center rounded-md border-2 ${checked ? 'border-accent bg-accent' : 'border-border bg-surface'}`}
+      >
+        {checked ? <Check size={16} color={c.accentText} strokeWidth={3} /> : null}
+      </View>
+      <View className="flex-1">{children}</View>
+    </Pressable>
   );
 }
 

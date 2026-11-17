@@ -5,7 +5,7 @@ import { Text } from 'react-native';
 import { useI18n } from '@/lib/i18n';
 import { emailRedirectUrl } from '@/lib/auth-links';
 import { supabase } from '@/lib/supabase';
-import { Brand, Button, Card, Field, Message, Screen, Segmented, Title, usePalette } from '@/ui/components';
+import { Body, Brand, Button, Card, Checkbox, Field, Message, Screen, Segmented, Title, usePalette } from '@/ui/components';
 
 export default function SignUpScreen() {
   const { t, errorText, locale, setLocale } = useI18n();
@@ -13,12 +13,13 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [aiConsent, setAiConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const handle = username.trim().toLowerCase();
-  const valid = email.includes('@') && USERNAME_PATTERN.test(handle) && password.length >= MIN_PASSWORD_LENGTH;
+  const valid = email.includes('@') && USERNAME_PATTERN.test(handle) && password.length >= MIN_PASSWORD_LENGTH && aiConsent;
 
   async function submit() {
     setBusy(true);
@@ -29,6 +30,7 @@ export default function SignUpScreen() {
         password,
         username: handle,
         locale,
+        aiConsent,
         emailRedirectTo: emailRedirectUrl(),
       });
       // With email confirmation on (production), there is no session yet.
@@ -84,6 +86,10 @@ export default function SignUpScreen() {
           ltr
           onSubmitEditing={() => valid && submit()}
         />
+        <Body small muted>{t('aiConsentText')}</Body>
+        <Checkbox checked={aiConsent} onChange={setAiConsent}>
+          <Body>{t('aiConsentAgree')}</Body>
+        </Checkbox>
         <Message text={error} />
         <Message text={notice} tone="success" />
         <Button title={t('signUp')} onPress={submit} busy={busy} disabled={!valid} />

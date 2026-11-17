@@ -38,7 +38,7 @@ function LocalizedApp() {
 }
 
 function Routes() {
-  const { session, loading } = useSession();
+  const { session, profile, loading } = useSession();
   const { t } = useI18n();
   const c = usePalette();
   const onExpiredLink = useCallback(() => {
@@ -47,9 +47,13 @@ function Routes() {
   useAuthLinks(onExpiredLink);
   if (loading) return <Loading />;
   const signedIn = !!session;
+  // Accounts from before the AI consent agree once before using the app. The
+  // server holds their links back until then, whatever the app shows.
+  const needsConsent = signedIn && !!profile && !profile.ai_consent_at;
+  const inApp = signedIn && !needsConsent;
   return (
     <>
-      <ShareRedirect signedIn={signedIn} />
+      <ShareRedirect signedIn={inApp} />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: c.bg },
@@ -60,11 +64,14 @@ function Routes() {
           headerBackTitle: t('back'),
         }}
       >
-        <Stack.Protected guard={signedIn} redirectTo="/sign-in">
+        <Stack.Protected guard={inApp} redirectTo={needsConsent ? '/consent' : '/sign-in'}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false, title: t('library') }} />
           <Stack.Screen name="scrap/[id]" options={{ title: '' }} />
           <Stack.Screen name="board/[id]" options={{ title: '' }} />
           <Stack.Screen name="share" options={{ headerShown: false, gestureEnabled: false }} />
+        </Stack.Protected>
+        <Stack.Protected guard={needsConsent} redirectTo="/">
+          <Stack.Screen name="consent" options={{ headerShown: false, gestureEnabled: false }} />
         </Stack.Protected>
         {/* Public pages (the stores link to them), signed in or not. */}
         <Stack.Screen name="privacy" />
