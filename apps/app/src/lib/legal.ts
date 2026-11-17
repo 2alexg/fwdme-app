@@ -3,7 +3,7 @@
 // Keep this in step with the data the app actually collects.
 
 /** Shown on the policy pages and the store listings. */
-export const CONTACT_EMAIL = '[CONTACT EMAIL]';
+export const CONTACT_EMAIL = 'support@fwdme.click';
 /** The publisher, as on the Apple and Google developer accounts. */
 export const PUBLISHER = '[YOUR NAME]';
 export const POLICY_UPDATED = { en: 'November 16, 2026', he: '16 בנובמבר 2026' };
