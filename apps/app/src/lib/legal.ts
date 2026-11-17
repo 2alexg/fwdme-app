@@ -5,7 +5,7 @@
 /** Shown on the policy pages and the store listings. */
 export const CONTACT_EMAIL = 'support@fwdme.click';
 /** The publisher, as on the Apple and Google developer accounts. */
-export const PUBLISHER = '[YOUR NAME]';
+export const PUBLISHER = 'Alex Golubev';
 export const POLICY_UPDATED = { en: 'November 16, 2026', he: '16 בנובמבר 2026' };
 
 export type LegalSection = { heading: string; paragraphs: string[] };
