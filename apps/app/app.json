@@ -68,7 +68,10 @@
         }
       ],
       "@bacons/apple-targets",
-      "@sentry/react-native/expo"
+      [
+        "@sentry/react-native/expo",
+        { "organization": "fwdme", "project": "fwdme-app" }
+      ]
     ],
     "scheme": "fwdme",
     "experiments": {
