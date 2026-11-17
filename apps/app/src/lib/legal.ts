@@ -6,7 +6,7 @@
 export const CONTACT_EMAIL = 'support@fwdme.click';
 /** The publisher, as on the Apple and Google developer accounts. */
 export const PUBLISHER = 'Alex Golubev';
-export const POLICY_UPDATED = { en: 'November 16, 2026', he: '16 בנובמבר 2026' };
+export const POLICY_UPDATED = { en: 'November 17, 2026', he: '17 בנובמבר 2026' };
 
 export type LegalSection = { heading: string; paragraphs: string[] };
 
@@ -41,6 +41,7 @@ const privacyEn: LegalSection[] = [
       'Anthropic receives the content of a saved page and any text shared with the link, to write its title, summary, category and tags.',
       'Voyage AI receives page text and the words you search with, for search by meaning.',
       'Sentry receives crash reports, on servers in the European Union (Germany).',
+      'We ask for your agreement (when you sign up, or once in the app for older accounts) before anything you save or search for is sent to Anthropic or Voyage AI. The app can’t be used without it, because organizing and searching your links is what it does; you can delete your account at any time instead.',
       'They process the data only on our behalf. Some are based in the United States; transfers rely on their standard contractual clauses.',
     ],
   },
@@ -102,6 +103,7 @@ const privacyHe: LegalSection[] = [
       'Anthropic מקבלת את תוכן הדף שנשמר וטקסט ששותף עם הקישור, כדי לכתוב כותרת, תקציר, קטגוריה ותגיות.',
       'Voyage AI מקבלת את טקסט הדף ואת מילות החיפוש, לחיפוש לפי משמעות.',
       'Sentry מקבלת דוחות קריסה, בשרתים באיחוד האירופי (גרמניה).',
+      'אנחנו מבקשים את הסכמתכם (בהרשמה, או פעם אחת באפליקציה בחשבונות ותיקים) לפני שמשהו ששמרתם או חיפשתם נשלח ל-Anthropic או ל-Voyage AI. בלי הסכמה אי אפשר להשתמש באפליקציה, כי סידור הקישורים והחיפוש בהם הם מה שהיא עושה; במקום זאת אפשר למחוק את החשבון בכל רגע.',
       'הם מעבדים את המידע רק עבורנו. חלקם בארצות הברית; ההעברה נשענת על הסעיפים החוזיים התקניים שלהם.',
     ],
   },

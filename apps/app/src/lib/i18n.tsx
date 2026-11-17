@@ -152,6 +152,15 @@ const en = {
   feedbackSent: 'Thanks! Your feedback was sent.',
   err_empty_feedback: 'Write something first.',
   err_too_much_feedback: 'That’s a lot of feedback for one day. Try again tomorrow.',
+  // AI consent
+  aiConsentText:
+    'Fwd:Me uses AI services (Anthropic and Voyage AI) to read the pages you save, write their titles and summaries, and power search. They process it only on our behalf.',
+  aiConsentAgree: 'I agree',
+  aiConsentTitle: 'One thing before you continue',
+  aiConsentIntro: 'Your links are organized by AI. We now ask everyone to agree to this before anything is sent.',
+  aiConsentContinue: 'Agree and continue',
+  aiConsentWaiting: 'Links you saved before this are organized as soon as you agree.',
+  err_ai_consent_required: 'Please agree to the AI services to continue.',
 };
 
 export type StringKey = keyof typeof en;
@@ -297,6 +306,16 @@ const he: Record<StringKey, string> = {
   feedbackSent: 'תודה! המשוב נשלח.',
   err_empty_feedback: 'כתבו משהו קודם.',
   err_too_much_feedback: 'זה הרבה משוב ליום אחד. נסו שוב מחר.',
+  // AI consent
+  aiConsentText:
+    // \u200F: starts with a Latin word, so mark the paragraph right to left.
+    '\u200FFwd:Me משתמשת בשירותי בינה מלאכותית (Anthropic ו-Voyage AI) כדי לקרוא את הדפים שאתם שומרים, לכתוב להם כותרות ותקצירים ולאפשר חיפוש. הם מעבדים את המידע רק עבורנו.',
+  aiConsentAgree: 'אני מסכים/ה',
+  aiConsentTitle: 'עוד דבר אחד לפני שממשיכים',
+  aiConsentIntro: 'הקישורים שלכם מסודרים בעזרת בינה מלאכותית. מעכשיו אנחנו מבקשים את הסכמתכם לפני ששולחים משהו.',
+  aiConsentContinue: 'מסכים/ה וממשיכים',
+  aiConsentWaiting: 'קישורים ששמרתם לפני כן יסודרו מיד אחרי ההסכמה.',
+  err_ai_consent_required: 'כדי להמשיך יש להסכים לשירותי הבינה המלאכותית.',
 };
 
 const dictionaries: Record<Locale, Record<StringKey, string>> = { en, he };
@@ -381,6 +400,7 @@ export function I18nProvider({ locale: preferred, children }: { locale?: Locale;
         delete_account_failed: 'err_delete_account_failed',
         empty_feedback: 'err_empty_feedback',
         too_much_feedback: 'err_too_much_feedback',
+        ai_consent_required: 'err_ai_consent_required',
       };
       const key = known[message] ?? (code ? known[code] : undefined);
       return key ? t(key) : t('err_generic');

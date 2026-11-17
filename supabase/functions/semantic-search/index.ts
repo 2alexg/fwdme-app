@@ -48,6 +48,14 @@ Deno.serve(async (req) => {
     return json({ error: 'not_authenticated' }, 401);
   }
 
+  // The typed words go to Voyage AI: only for people who agreed to the AI services.
+  const { data: consented, error: consentError } = await db.rpc('my_ai_consent');
+  if (consentError) {
+    log('consent check failed', { error: consentError.message });
+    return json({ error: 'search_failed' }, 500);
+  }
+  if (!consented) return json({ error: 'ai_consent_required' }, 403);
+
   let body: { query?: unknown; category?: unknown; limit?: unknown };
   try {
     body = await req.json();

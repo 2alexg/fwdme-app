@@ -40,11 +40,11 @@ Mailpit at http://127.0.0.1:54324.
 ## Tests
 
 ```sh
-pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards, search, search by meaning, merging redirected links, share tokens, account deletion, feedback (156 checks)
+pnpm test:db      # pgTAP: privacy, sign-up, save_scrap, account type, enrichment queue + categories, boards, search, search by meaning, merging redirected links, share tokens, account deletion, feedback, AI consent (172 checks)
 pnpm test         # core + enrichment pipeline unit tests, API integration tests against local Supabase
 pnpm typecheck
 pnpm build:web && npx serve -s apps/app/dist -l 8081 &   # then:
-pnpm test:e2e     # sign up → save → organized in background → comment → search → visibility → boards → delete → account type → Hebrew/RTL → feedback → sign in again → delete account
+pnpm test:e2e     # sign up → save → organized in background → comment → search → visibility → boards → delete → account type → Hebrew/RTL → feedback → sign in again → delete account → older account agrees to the AI services
 ```
 
 Integration tests skip themselves when local Supabase isn't running (and the background test when the
@@ -212,6 +212,20 @@ worker isn't served). The e2e run needs the worker served.
 - People can't read feedback back (no policies on `feedback`); read it in the Supabase dashboard:
   Table Editor → `feedback`. `user_id` matches the user id on Sentry crash reports. Deleted with
   the account.
+
+## How it works (milestone 5): consent to the AI services
+
+- App Store guideline 5.1.2(i) asks for explicit permission before personal data goes to a
+  third-party AI. Saving a link sends the page (and text shared with it) to Anthropic, and page text
+  and search words to Voyage AI, so the app asks once and the agreement is required.
+- Sign-up has an "I agree" box; the app sends `ai_consent: true` in the sign-up metadata and
+  `handle_new_user()` stores the time in `profiles.ai_consent_at`. Accounts from before that see
+  `/consent` on their next launch (route guard in `_layout.tsx`) and agree with `give_ai_consent()`,
+  which also wakes the worker. From there they can only sign out or go to the deletion page.
+- The server enforces it, not just the app: `worker_claim_items()` only hands out items that at
+  least one person who saved them agreed for, `worker_shared_texts()` only returns their shared text,
+  and `semantic-search` answers `403 ai_consent_required` without consent. Links saved before
+  agreeing wait in the queue and are organized right after.
 
 ## How it works (milestone 5): public pages for the stores
 

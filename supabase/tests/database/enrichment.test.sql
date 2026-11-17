@@ -7,7 +7,7 @@ select plan(25);
 update items set status = 'ready', locked_until = null;
 
 insert into auth.users (id, email, raw_user_meta_data) values
-  ('aaaaaaaa-0000-0000-0000-000000000001', 'enrich-owner@test.local', '{"username":"enrich_owner"}'),
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'enrich-owner@test.local', '{"username":"enrich_owner","ai_consent":true}'),
   ('aaaaaaaa-0000-0000-0000-000000000002', 'enrich-other@test.local', '{"username":"enrich_other"}');
 
 -- Plumbing

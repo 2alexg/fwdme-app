@@ -138,15 +138,10 @@ const deps: PipelineDeps = {
     return path;
   },
   async sharedTexts(itemId) {
-    const { data, error } = await db
-      .from('scraps')
-      .select('shared_text')
-      .eq('item_id', itemId)
-      .not('shared_text', 'is', null)
-      .order('created_at')
-      .limit(2);
+    // Only from people who agreed to the AI services (see the ai_consent migration).
+    const { data, error } = await db.rpc('worker_shared_texts', { p_item: itemId, p_limit: 2 });
     if (error) throw new TransientError(`db: ${error.message}`);
-    return (data ?? []).map((r: { shared_text: string }) => r.shared_text);
+    return (data ?? []) as string[];
   },
   async resolveItem(itemId, canonicalUrl, source) {
     const { data, error } = await db.rpc('worker_resolve_item', {

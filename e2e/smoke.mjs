@@ -41,6 +41,8 @@ const inputs = page.locator('input:visible');
 await inputs.nth(0).fill(email);
 await inputs.nth(1).fill(username);
 await inputs.nth(2).fill(password);
+if (!(await page.getByRole('button', { name: 'Create account' }).isDisabled())) throw new Error('sign-up allowed without the AI consent');
+await page.getByRole('checkbox', { name: 'I agree' }).click();
 await page.getByRole('button', { name: 'Create account' }).click();
 await page.getByText('Nothing saved yet').waitFor({ timeout: 15000 });
 await page.getByRole('tab', { name: 'Library' }).waitFor();
@@ -272,6 +274,29 @@ await page.locator('input:visible').nth(1).fill(password);
 await page.getByRole('button').first().click();
 await page.getByRole('alert').waitFor();
 step('deleting the account signs out, and the account no longer signs in');
+
+// An account from before the AI consent is asked once, then reaches its library
+const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
+const SUPABASE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY ?? 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
+const oldEmail = `e2e_old_${run}@test.local`;
+const signup = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+  method: 'POST',
+  headers: { apikey: SUPABASE_KEY, 'content-type': 'application/json' },
+  body: JSON.stringify({ email: oldEmail, password, data: { username: `e2e_old_${run}`, locale: 'en' } }),
+});
+if (!signup.ok) throw new Error(`creating the older account failed: ${signup.status}`);
+await page.locator('input:visible').nth(0).fill(oldEmail);
+await page.locator('input:visible').nth(1).fill(password);
+await page.getByRole('button').first().click();
+const agree = page.getByRole('button', { name: 'Agree and continue' });
+await agree.waitFor({ timeout: 15000 });
+await page.screenshot({ path: `${out}/consent.png`, fullPage: true });
+await page.goto(`${BASE}/`);
+await agree.waitFor();
+await page.getByRole('checkbox', { name: 'I agree' }).click();
+await agree.click();
+await page.getByText('Nothing saved yet').waitFor({ timeout: 15000 });
+step('an older account agrees to the AI services once, then opens its library');
 
 await browser.close();
 // Deliberate failures log 400s (wrong password, deleted account), one 403 (signing out a deleted

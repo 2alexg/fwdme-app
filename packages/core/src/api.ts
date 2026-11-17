@@ -113,8 +113,11 @@ export async function signUp(
     locale: Locale;
     /** Where the confirmation email's link sends people (e.g. fwdme:// on phones). */
     emailRedirectTo?: string;
+    /** Agreed to the AI services; required to sign up. */
+    aiConsent: boolean;
   },
 ) {
+  if (!input.aiConsent) throw new ApiError('ai_consent_required');
   const username = input.username.trim().toLowerCase();
   if (!USERNAME_PATTERN.test(username)) throw new ApiError('invalid_username');
   if (input.password.length < MIN_PASSWORD_LENGTH) throw new ApiError('weak_password');
@@ -123,7 +126,7 @@ export async function signUp(
     await db.auth.signUp({
       email: input.email.trim(),
       password: input.password,
-      options: { data: { username, locale: input.locale }, emailRedirectTo: input.emailRedirectTo },
+      options: { data: { username, locale: input.locale, ai_consent: true }, emailRedirectTo: input.emailRedirectTo },
     }),
   );
 }
@@ -191,6 +194,14 @@ export async function getMyProfile(db: Db): Promise<Profile | null> {
   const { data: auth } = await db.auth.getUser();
   if (!auth.user) return null;
   return unwrap(await db.from('profiles').select('*').eq('id', auth.user.id).maybeSingle());
+}
+
+/**
+ * Agree to the AI services (older accounts, from the consent screen). Links
+ * saved before then start being organized right away.
+ */
+export async function giveAiConsent(db: Db): Promise<string> {
+  return unwrap(await db.rpc('give_ai_consent'));
 }
 
 export async function updateMyProfile(db: Db, userId: string, patch: ProfileUpdate): Promise<Profile> {

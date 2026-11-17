@@ -25,6 +25,7 @@ import {
   deleteScrap,
   editComment,
   getMyProfile,
+  giveAiConsent,
   getScrap,
   isProcessing,
   listMyScraps,
@@ -67,10 +68,10 @@ describe.skipIf(!reachable)('api against local supabase', () => {
 
   beforeAll(async () => {
     const a = await signUp(alice, {
-      email: `alice_${run}@test.local`, password, username: `alice_${run}`, locale: 'en',
+      email: `alice_${run}@test.local`, password, username: `alice_${run}`, locale: 'en', aiConsent: true,
     });
     aliceId = a.user!.id;
-    await signUp(bob, { email: `bob_${run}@test.local`, password, username: `bob_${run}`, locale: 'he' });
+    await signUp(bob, { email: `bob_${run}@test.local`, password, username: `bob_${run}`, locale: 'he', aiConsent: true });
   });
 
   it('creates a profile at sign-up and rejects a taken handle', async () => {
@@ -78,8 +79,24 @@ describe.skipIf(!reachable)('api against local supabase', () => {
     expect(me).toMatchObject({ username: `alice_${run}`, locale: 'en', account_type: 'private' });
     expect(await usernameAvailable(anon, `ALICE_${run}`)).toBe(false);
     await expect(
-      signUp(client(), { email: `x_${run}@test.local`, password, username: `alice_${run}`, locale: 'en' }),
+      signUp(client(), { email: `x_${run}@test.local`, password, username: `alice_${run}`, locale: 'en', aiConsent: true }),
     ).rejects.toThrow('username_taken');
+  });
+
+  it('asks for the AI consent', async () => {
+    expect((await getMyProfile(alice))?.ai_consent_at).toBeTruthy();
+    await expect(
+      signUp(client(), { email: `y_${run}@test.local`, password, username: `nope_${run}`, locale: 'en', aiConsent: false }),
+    ).rejects.toThrow('ai_consent_required');
+
+    // An account from before the consent screen agrees from the app.
+    const dave = client();
+    await dave.auth.signUp({ email: `dave_${run}@test.local`, password, options: { data: { username: `dave_${run}` } } });
+    expect((await getMyProfile(dave))?.ai_consent_at).toBeNull();
+    const at = await giveAiConsent(dave);
+    expect((await getMyProfile(dave))?.ai_consent_at).toBe(at);
+    expect(await giveAiConsent(dave)).toBe(at);
+    await expect(giveAiConsent(anon)).rejects.toBeInstanceOf(ApiError);
   });
 
   it('signs in with email and password', async () => {
@@ -258,7 +275,7 @@ describe.skipIf(!reachable)('api against local supabase', () => {
   it.skipIf(!workerUp)('deletes an account and everything in it', async () => {
     const carol = client();
     const email = `carol_${run}@test.local`;
-    await signUp(carol, { email, password, username: `carol_${run}`, locale: 'en' });
+    await signUp(carol, { email, password, username: `carol_${run}`, locale: 'en', aiConsent: true });
     await saveScrap(carol, { input: `https://example.com/only-carol-${run}` });
     await saveScrap(carol, { input: `https://example.com/carol-and-bob-${run}` });
     const bobs = await saveScrap(bob, { input: `https://example.com/carol-and-bob-${run}` });

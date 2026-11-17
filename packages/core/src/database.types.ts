@@ -175,14 +175,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "account_type": Database["public"]['Enums']["account_type"],"avatar_url": string | null,"bio": string | null,"created_at": string,"display_name": string | null,"id": string,"locale": string,"profile_field_consent": NonNullable<Json>,"updated_at": string,"username": string
+                    "account_type": Database["public"]['Enums']["account_type"],"ai_consent_at": string | null,"avatar_url": string | null,"bio": string | null,"created_at": string,"display_name": string | null,"id": string,"locale": string,"profile_field_consent": NonNullable<Json>,"updated_at": string,"username": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "account_type"?: Database["public"]['Enums']["account_type"],"avatar_url"?: string | null,"bio"?: string | null,"created_at"?: string,"display_name"?: string | null,"id": string,"locale"?: string,"profile_field_consent"?: NonNullable<Json>,"updated_at"?: string,"username": string
+                    "account_type"?: Database["public"]['Enums']["account_type"],"ai_consent_at"?: string | null,"avatar_url"?: string | null,"bio"?: string | null,"created_at"?: string,"display_name"?: string | null,"id": string,"locale"?: string,"profile_field_consent"?: NonNullable<Json>,"updated_at"?: string,"username": string
                   }
                   Update: {
-                    "account_type"?: Database["public"]['Enums']["account_type"],"avatar_url"?: string | null,"bio"?: string | null,"created_at"?: string,"display_name"?: string | null,"id"?: string,"locale"?: string,"profile_field_consent"?: NonNullable<Json>,"updated_at"?: string,"username"?: string
+                    "account_type"?: Database["public"]['Enums']["account_type"],"ai_consent_at"?: string | null,"avatar_url"?: string | null,"bio"?: string | null,"created_at"?: string,"display_name"?: string | null,"id"?: string,"locale"?: string,"profile_field_consent"?: NonNullable<Json>,"updated_at"?: string,"username"?: string
                   }
                   Relationships: [
                     
@@ -303,10 +303,16 @@ isOneToOne: false
 "delete_orphan_items":
 { Args: { "p_item_ids": (string)[] }; Returns: (string)[]
                            },
+"give_ai_consent":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "match_my_scraps":
 { Args: { "p_category"?: string,"p_embedding": string,"p_limit"?: number,"p_min_similarity"?: number }; Returns: {
               "scrap_id": string,"similarity": number
             }[]
+                           },
+"my_ai_consent":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "my_boards":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -405,6 +411,9 @@ isOneToOne: false
       } },
 "worker_resolve_item":
 { Args: { "p_canonical_url": string,"p_item": string,"p_source": string }; Returns: Json
+                           },
+"worker_shared_texts":
+{ Args: { "p_item": string,"p_limit"?: number }; Returns: string[]
                            }
           }
           Enums: {

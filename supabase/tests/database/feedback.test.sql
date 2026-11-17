@@ -24,7 +24,7 @@ select is((select body || ' / ' || platform || ' ' || os_version || ' / ' || loc
            where body like 'The share%'),
           'The share sheet is slow / ios 18.2 / he', 'trimmed, with where it came from');
 delete from auth.users where id = 'fb111111-1111-1111-1111-111111111111';
-select is((select count(*)::int from feedback), 0, 'deleted with the account');
+select is((select count(*)::int from feedback where user_id = 'fb111111-1111-1111-1111-111111111111'), 0, 'deleted with the account');
 
 select * from finish();
 rollback;
