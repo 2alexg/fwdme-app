@@ -2,6 +2,7 @@
 
 Save anything from any app in one tap, have it organized automatically, and optionally share it.
 Design doc: [Scrapbook App — Product & Technical Design](https://claude.ai/artifact/1eAUAC2aFVSCbnMZ7DZuPM).
+Services the apps depend on: [docs/services.md](docs/services.md).
 
 **Status:** milestone 5 of 5 — getting ready for the beta (account deletion first); the iOS share sheet is being tested.
 Sharing works on Android; on iOS through a native share extension (TestFlight).
