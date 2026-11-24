@@ -1,0 +1,10 @@
+# Store screenshots, part 2: the screen shown after sharing a link into Fwd:Me.
+# capture.sh starts this, then sends the share; the screen closes itself after
+# 4 seconds, so this only waits and takes the picture.
+appId: app.fwdme.mobile
+name: Store screenshot of a share
+---
+- extendedWaitUntil:
+    visible: .*${SHARE_SAVED}.*
+    timeout: 90000
+- takeScreenshot: 01-share

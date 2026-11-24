@@ -271,6 +271,8 @@ worker isn't served). The e2e run needs the worker served.
 - **Store graphics:** `store/feature-graphic.html` + `scripts/make-store-graphics.mjs` write the
   Play feature graphic (English and Hebrew, 1024×500) and the 512px icon to `store/out/`. The
   command is at the top of the script.
+- **Store screenshots:** Maestro on a real phone, then framed with captions. See
+  `apps/app/store/screenshots/README.md`.
 
 ### Deploying the worker to the cloud
 

@@ -13,3 +13,4 @@ supabase/.temp/
 supabase/.branches/
 dist-hosting/
 apps/app/store/out/
+apps/app/store/screenshots/raw/
