@@ -1,0 +1,55 @@
+# Store screenshots, part 1: library, detail, search, boards.
+# Run by capture.sh, which passes the labels in the right language (-e ...).
+appId: app.fwdme.mobile
+name: Store screenshots
+---
+# The app switches to the profile's language on start, and reloads once when
+# that changes the text direction. A second start makes sure that's behind us.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: ${SAVE_LINK}
+    timeout: 45000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: ${SAVE_LINK}
+    timeout: 45000
+
+# Library, grid view, pictures loaded
+- tapOn: ${VIEW_GRID}
+- extendedWaitUntil:
+    visible: ${DETAIL_COMMENT}
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: 02-library
+
+# A scrap: summary, category, comments
+- tapOn: ${DETAIL_COMMENT}
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: 03-detail
+- back
+
+# Search by meaning
+- tapOn: ${SEARCH_PLACEHOLDER}
+- tapOn: ${SEARCH_PLACEHOLDER}
+- inputText: ${SEARCH_QUERY}
+- hideKeyboard
+- extendedWaitUntil:
+    visible: ${SEARCH_EXPECT}
+    timeout: 15000
+  optional: true
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: 04-search
+
+# Boards
+- tapOn: ${BOARDS}
+- extendedWaitUntil:
+    visible: ${BOARD_NAME}
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: 05-boards

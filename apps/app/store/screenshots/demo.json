@@ -1,0 +1,37 @@
+{
+  "_note": "Content of the demo account used for the store screenshots (see README.md). Links are saved oldest first, so the last one ends up at the top of the library.",
+  "links": [
+    { "url": "https://en.wikipedia.org/wiki/Yoga", "en": "10 minutes every morning", "he": "10 דקות כל בוקר" },
+    { "url": "https://en.wikipedia.org/wiki/Bauhaus", "en": "Ideas for the poster wall", "he": "רעיונות לקיר הפוסטרים" },
+    { "url": "https://en.wikipedia.org/wiki/Dune_(novel)", "en": "Read before the movie", "he": "לקרוא לפני הסרט" },
+    { "url": "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope", "en": "Show the kids the new photos", "he": "להראות לילדים את התמונות החדשות" },
+    { "url": "https://en.wikipedia.org/wiki/Raspberry_Pi", "en": "Home media server project", "he": "פרויקט שרת מדיה לבית" },
+    { "url": "https://en.wikipedia.org/wiki/Monstera_deliciosa", "en": "For the living room corner", "he": "לפינה בסלון" },
+    { "url": "https://en.wikipedia.org/wiki/Sourdough", "en": "Try the overnight starter", "he": "לנסות מחמצת של לילה" },
+    { "url": "https://en.wikipedia.org/wiki/Kyoto", "en": "Autumn leaves, one day", "he": "שלכת ביפן, מתישהו" },
+    { "url": "https://en.wikipedia.org/wiki/Lisbon", "en": "May trip: trams and pastéis de nata", "he": "טיול במאי: חשמליות ופסטל דה נאטה" },
+    { "url": "https://en.wikipedia.org/wiki/Shakshouka", "en": "Sunday brunch, extra feta", "he": "בראנץ' של שבת, עם הרבה פטה" }
+  ],
+  "boards": [
+    {
+      "en": "Trip ideas",
+      "he": "רעיונות לטיולים",
+      "links": ["https://en.wikipedia.org/wiki/Lisbon", "https://en.wikipedia.org/wiki/Kyoto"]
+    },
+    {
+      "en": "Weekend cooking",
+      "he": "בישולי סוף שבוע",
+      "links": ["https://en.wikipedia.org/wiki/Shakshouka", "https://en.wikipedia.org/wiki/Sourdough"]
+    },
+    {
+      "en": "Home projects",
+      "he": "פרויקטים לבית",
+      "links": ["https://en.wikipedia.org/wiki/Monstera_deliciosa", "https://en.wikipedia.org/wiki/Raspberry_Pi"]
+    }
+  ],
+  "_share": "Shared into the app by capture.sh for the 'save from any app' screenshot. Not seeded, so it is new each run.",
+  "share": "https://en.wikipedia.org/wiki/Paella",
+  "_detail": "The scrap opened for the detail screenshot, found by its comment.",
+  "detail": "https://en.wikipedia.org/wiki/Shakshouka",
+  "search": { "en": "weekend trip ideas", "he": "רעיונות לטיול" }
+}

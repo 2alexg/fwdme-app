@@ -1,0 +1,17 @@
+{
+  "_note": "Captions over each store screenshot, keyed by the screenshot name without its number. Edit freely, then rerun scripts/frame-screenshots.mjs.",
+  "en": {
+    "share": { "title": "Save from any app", "sub": "Tap Share, pick Fwd:Me. That's it." },
+    "library": { "title": "Sorted for you", "sub": "Titles, pictures and categories, all automatic" },
+    "detail": { "title": "The gist at a glance", "sub": "A short summary, plus your own notes" },
+    "search": { "title": "Find it by meaning", "sub": "Search “weekend trip” and Lisbon shows up" },
+    "boards": { "title": "Group it your way", "sub": "Boards for trips, recipes, projects, anything" }
+  },
+  "he": {
+    "share": { "title": "שומרים מכל אפליקציה", "sub": "שיתוף, בוחרים ב-Fwd:Me, וזהו" },
+    "library": { "title": "הכול מסתדר לבד", "sub": "כותרות, תמונות וקטגוריות, אוטומטית" },
+    "detail": { "title": "התמצית במבט אחד", "sub": "תקציר קצר, וההערות שלכם" },
+    "search": { "title": "מוצאים לפי משמעות", "sub": "מחפשים „טיול” ומוצאים את ליסבון" },
+    "boards": { "title": "מקבצים בדרך שלכם", "sub": "לוחות לטיולים, למתכונים, לפרויקטים, למה שתרצו" }
+  }
+}
